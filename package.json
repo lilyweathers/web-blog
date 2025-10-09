@@ -1,8 +1,8 @@
 {
-  "name": "blog-vanilla",
+  "name": "blog-web",
   "version": "1.2.0",
   "private": true,
-  "description": "Minimal blog without Express/CORS/nanoid \u2014 with comments, like button (count + toggle), and author names.",
+  "description": "Minimal blog with comments and like button.",
   "scripts": {
     "start": "node server.js"
   },
