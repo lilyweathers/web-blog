@@ -1,0 +1,97 @@
+[
+  {
+    "id": "p1",
+    "title": "A Quiet Morning",
+    "content": "The world felt still today. I made coffee, opened the window, and let the soft light spill in. Sometimes that’s all we need — quiet and breath.",
+    "author": "Mira",
+    "createdAt": 1759740131000,
+    "updatedAt": 1759740131000,
+    "liked": false,
+    "likeCount": 7,
+    "comments": [
+      {
+        "id": "c1",
+        "content": "This feels so peaceful. I needed to read this today.",
+        "author": "Marina",
+        "createdAt": 1759741282000
+      },
+      {
+        "id": "c2",
+        "content": "Mornings like this are medicine for the soul.",
+        "author": "Leo",
+        "createdAt": 1759745749000
+      }
+    ]
+  },
+  {
+    "id": "p2",
+    "title": "Rain on the Glass",
+    "content": "Raindrops traced stories on my window tonight. I caught myself watching them fall for too long, lost somewhere between thoughts and memories.",
+    "author": "Callum",
+    "createdAt": 1759865027000,
+    "updatedAt": 1759865027000,
+    "liked": false,
+    "likeCount": 11,
+    "comments": [
+      {
+        "id": "c3",
+        "content": "Your writing paints such vivid pictures.",
+        "author": "Ella",
+        "createdAt": 1759866030000
+      }
+    ]
+  },
+  {
+    "id": "p3",
+    "title": "Wandering Steps",
+    "content": "I walked without direction today — no map, no reason, just rhythm. The city hums differently when you let it guide you instead of rushing through it.",
+    "author": "Rowan",
+    "createdAt": 1759673341000,
+    "updatedAt": 1759673341000,
+    "liked": false,
+    "likeCount": 5,
+    "comments": []
+  },
+  {
+    "id": "p4",
+    "title": "The Weight of Silence",
+    "content": "Sometimes silence isn’t empty; it’s full — of unsaid words, paused breath, and the ache of things we can’t quite name.",
+    "author": "Julian",
+    "createdAt": 1759532116000,
+    "updatedAt": 1759532116000,
+    "liked": false,
+    "likeCount": 9,
+    "comments": [
+      {
+        "id": "c4",
+        "content": "This hit me right in the heart. Beautifully said.",
+        "author": "Nadia",
+        "createdAt": 1759540378000
+      }
+    ]
+  },
+  {
+    "id": "p5",
+    "title": "Late-Night Thoughts",
+    "content": "There’s something about 2 a.m. that turns thoughts into constellations. Maybe it’s just the quiet letting us finally hear ourselves.",
+    "author": "Maeve",
+    "createdAt": 1759371276000,
+    "updatedAt": 1759371276000,
+    "liked": false,
+    "likeCount": 13,
+    "comments": [
+      {
+        "id": "c5",
+        "content": "Relatable — night seems to stretch the mind wider somehow.",
+        "author": "Theo",
+        "createdAt": 1759373112000
+      },
+      {
+        "id": "c6",
+        "content": "Love this line about constellations. Feels poetic.",
+        "author": "Amara",
+        "createdAt": 1759374003000
+      }
+    ]
+  }
+]

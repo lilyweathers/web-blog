@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lily's Notebook</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Lily's Notebook</h1>
+    </header>
+
+    <main>
+      <section id="new-post">
+        <h2>New Post</h2>
+        <form id="post-form">
+          <div class="row">
+            <input id="author" placeholder="Name" required />
+            <input id="title" placeholder="Title" required />
+          </div>
+          <textarea id="content" placeholder="Write something..." required></textarea>
+          <button type="submit">Publish</button>
+        </form>
+      </section>
+
+      <section id="posts">
+        <h2>Posts</h2>
+        <div id="list"></div>
+      </section>
+    </main>
+
+    <script src="/main.js"></script>
+  </body>
+</html>
