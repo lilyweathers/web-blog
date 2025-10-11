@@ -6,3 +6,5 @@ npm init -y
 npm install express cors nanoid
 node server.js
 visit localhost:3000
+
+![alt text](/screenshot.jpg)

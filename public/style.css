@@ -25,7 +25,7 @@ body {
 }
 
 header {
-    padding: 1rem 1.25rem;
+    padding: 8rem 1.25rem;
     border-bottom: 1px solid var(--third-color);
     background: var(--primary-bg-color);
     text-align: center;
@@ -34,7 +34,6 @@ header {
     background-repeat: no-repeat;
     background-size: 100% auto;
     background-position: top center;
-    position: sticky;
     top: 0;
     z-index: 1;
 }
@@ -52,6 +51,12 @@ h3 {
     color: white;
     margin: 0 0 .75rem;
     text-shadow: 1px 1px var(--third-color);
+}
+
+#header-h2 {
+    margin: auto;
+    width: 65%;
+    max-width: 1000px;
 }
 
 #posts {
