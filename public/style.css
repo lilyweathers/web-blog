@@ -120,7 +120,7 @@ button {
     border-radius: 10px;
     border: 1px solid var(--third-color);
     background: #ffffff;
-    color: #e28ca7;
+    color: var(--secondary-color);
     cursor: pointer
 }
 
@@ -403,16 +403,19 @@ input[type=file]::file-selector-button:hover {
     height: 36px;
     border-radius: 10px;
     border: 1px solid #d1d5db;
-    background: #fff;
+    background: var(--primary-color);
     cursor: pointer;
     line-height: 1;
     padding: 0;
     border: 1px solid var(--third-color);
 }
 
+.np-toggle:hover { {
+    color: var(--secondary-color);
+}
+
 .np-toggle[aria-expanded="true"] {
-    background-color: var(--primary-bg-color);
-    color: #fff;
+    background-color: var(--primary-color);
     border-color: #111827;
 }
 
