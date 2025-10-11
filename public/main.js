@@ -1,9 +1,10 @@
+let STATE_POSTS = [];
 // Client script: render posts, create/edit/delete, like, comments, with images.
 
 const $ = sel => document.querySelector(sel);
 const LIKE_KEY = id => `liked:${id}`;
 
-const escapeHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const escapeHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const fmtDate = ms => ms ? new Date(ms).toLocaleString() : '';
 
 async function fetchJSON(url, options) {
@@ -19,10 +20,10 @@ function setLiked(id, v) { v ? localStorage.setItem(LIKE_KEY(id), '1') : localSt
 
 async function loadPosts() {
   const data = await fetchJSON('/api/posts');
-  const posts = data.slice().sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  STATE_POSTS = Array.isArray(data) ? data.slice() : []; const posts = data.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   const root = $('#posts');
   if (!root) return;
-  root.innerHTML = '';
+  root.innerHTML = '<h2>Posts</h2>';
   for (const p of posts) {
     const likedLocal = getLiked(p.id);
     const div = document.createElement('div');
@@ -62,7 +63,7 @@ function renderComments(comments) {
   }
   return comments
     .slice()
-    .sort((a,b) => (a.createdAt||0) - (b.createdAt||0))
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
     .map(c => `<div class="comment"><div class="meta">${escapeHtml(c.author || 'Anonymous')}${c.createdAt ? ' • ' + fmtDate(c.createdAt) : ''}</div>${escapeHtml(c.content || '')}</div>`)
     .join('');
 }
@@ -125,17 +126,10 @@ async function onPostsClick(e) {
   }
 
   if (e.target.matches('button[data-edit]')) {
-    const curTitle = postEl.querySelector('h3')?.textContent || '';
-    const curContent = postEl.querySelector('p')?.textContent || '';
-    const title = prompt('New title:', curTitle);
-    const content = prompt('New content:', curContent);
-    if (title == null || content == null) return;
-    try {
-      await fetchJSON(`/api/posts/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify({ title, content }) });
-      await loadPosts();
-    } catch (err) {
-      alert('Failed to update: ' + err.message);
-    }
+    const id = postEl.dataset.id;
+    const post = (STATE_POSTS || []).find(p => String(p.id) === String(id));
+    if (!post) return;
+    showEditModal(post);
     return;
   }
 
@@ -169,7 +163,7 @@ async function onPostsSubmit(e) {
   const postEl = e.target.closest('.post');
   const id = postEl?.dataset.id;
   const content = form.querySelector('textarea[name="content"]')?.value.trim();
-  const author  = form.querySelector('input[name="author"]')?.value.trim();
+  const author = form.querySelector('input[name="author"]')?.value.trim();
   if (!content) return;
   try {
     await fetchJSON(`/api/posts/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify({ content, author }) });
@@ -188,7 +182,67 @@ document.getElementById('posts')?.addEventListener('submit', onPostsSubmit);
   try { await loadPosts(); }
   catch (err) {
     const root = document.getElementById('posts');
-    if (root) root.innerHTML = `<div class="post">Failed to load posts: ${escapeHtml(err.message||String(err))}</div>`;
+    if (root) root.innerHTML = `<div class="post">Failed to load posts: ${escapeHtml(err.message || String(err))}</div>`;
     console.error(err);
   }
-})(); 
+})();
+
+
+function showEditModal(post) {
+  const modal = document.getElementById('edit-modal');
+  if (!modal) return;
+  document.getElementById('edit-id').value = post.id || '';
+  document.getElementById('edit-title').value = post.title || '';
+  document.getElementById('edit-author').value = post.author || 'Anonymous';
+  document.getElementById('edit-content').value = post.content || '';
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function hideEditModal() {
+  const modal = document.getElementById('edit-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.matches('#edit-modal [data-close]')) {
+    hideEditModal();
+  }
+  if (e.target.matches('#edit-modal .modal-backdrop')) {
+    hideEditModal();
+  }
+});
+
+// Submit edit form -> PUT update
+document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('edit-id')?.value;
+  const title = document.getElementById('edit-title')?.value.trim();
+  const author = document.getElementById('edit-author')?.value.trim();
+  const content = document.getElementById('edit-content')?.value.trim();
+  if (!id || !title || !content) { alert('Please fill out Title and Content'); return; }
+  try {
+    await fetchJSON(`/api/posts/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title, author, content })
+    });
+    hideEditModal();
+    await loadPosts();
+  } catch (err) {
+    alert('Failed to update: ' + (err.message || err));
+  }
+});
+
+// Collapsible New Post form
+document.addEventListener('click', function /*__NP_COLLAPSE_TOGGLE__*/(e) {
+  const btn = e.target.closest('#np-toggle');
+  if (!btn) return;
+  const form = document.getElementById('post-form');
+  if (!form) return;
+  const expanded = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', String(!expanded));
+  if (expanded) form.setAttribute('hidden', '');
+  else form.removeAttribute('hidden');
+});
