@@ -1,12 +1,8 @@
 {
-  "name": "blog-web",
-  "version": "1.2.0",
+  "name": "web-blog-fixed-native",
+  "version": "1.0.0",
   "private": true,
-  "description": "Minimal blog with comments and like button.",
   "scripts": {
     "start": "node server.js"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }

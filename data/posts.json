@@ -5,23 +5,24 @@
     "content": "The world felt still today. I made coffee, opened the window, and let the soft light spill in. Sometimes that’s all we need — quiet and breath.",
     "author": "Mira",
     "createdAt": 1759740131000,
-    "updatedAt": 1759740131000,
-    "liked": false,
-    "likeCount": 7,
+    "updatedAt": 1760194681735,
     "comments": [
       {
         "id": "c1",
         "content": "This feels so peaceful. I needed to read this today.",
         "author": "Marina",
-        "createdAt": 1759741282000
+        "createdAt": 1759741282000,
+        "likes": 0
       },
       {
         "id": "c2",
         "content": "Mornings like this are medicine for the soul.",
         "author": "Leo",
-        "createdAt": 1759745749000
+        "createdAt": 1759745749000,
+        "likes": 0
       }
-    ]
+    ],
+    "likes": 11
   },
   {
     "id": "p2",
@@ -29,17 +30,17 @@
     "content": "Raindrops traced stories on my window tonight. I caught myself watching them fall for too long, lost somewhere between thoughts and memories.",
     "author": "Callum",
     "createdAt": 1759865027000,
-    "updatedAt": 1760038391081,
-    "liked": true,
-    "likeCount": 12,
+    "updatedAt": 1760194681087,
     "comments": [
       {
         "id": "c3",
         "content": "Your writing paints such vivid pictures.",
         "author": "Ella",
-        "createdAt": 1759866030000
+        "createdAt": 1759866030000,
+        "likes": 0
       }
-    ]
+    ],
+    "likes": 12
   },
   {
     "id": "p3",
@@ -48,9 +49,8 @@
     "author": "Rowan",
     "createdAt": 1759673341000,
     "updatedAt": 1759673341000,
-    "liked": false,
-    "likeCount": 5,
-    "comments": []
+    "comments": [],
+    "likes": 5
   },
   {
     "id": "p4",
@@ -59,16 +59,16 @@
     "author": "Julian",
     "createdAt": 1759532116000,
     "updatedAt": 1759532116000,
-    "liked": false,
-    "likeCount": 9,
     "comments": [
       {
         "id": "c4",
         "content": "This hit me right in the heart. Beautifully said.",
         "author": "Nadia",
-        "createdAt": 1759540378000
+        "createdAt": 1759540378000,
+        "likes": 0
       }
-    ]
+    ],
+    "likes": 9
   },
   {
     "id": "p5",
@@ -77,21 +77,22 @@
     "author": "Maeve",
     "createdAt": 1759371276000,
     "updatedAt": 1759371276000,
-    "liked": false,
-    "likeCount": 13,
     "comments": [
       {
         "id": "c5",
         "content": "Relatable — night seems to stretch the mind wider somehow.",
         "author": "Theo",
-        "createdAt": 1759373112000
+        "createdAt": 1759373112000,
+        "likes": 0
       },
       {
         "id": "c6",
         "content": "Love this line about constellations. Feels poetic.",
         "author": "Amara",
-        "createdAt": 1759374003000
+        "createdAt": 1759374003000,
+        "likes": 0
       }
-    ]
+    ],
+    "likes": 13
   }
 ]
