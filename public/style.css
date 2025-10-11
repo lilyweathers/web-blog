@@ -410,7 +410,7 @@ input[type=file]::file-selector-button:hover {
     border: 1px solid var(--third-color);
 }
 
-.np-toggle:hover { {
+.np-toggle:hover {
     color: var(--secondary-color);
 }
 
