@@ -4,8 +4,10 @@
     --third-bg-color: #ffe6fb;
     --primary-color: #ffffff;
     --secondary-color: #e28ca7;
-    ;
     --third-color: #000000;
+
+    --font: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+    margin: 0;
 }
 
 * {
@@ -13,9 +15,9 @@
 }
 
 body {
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
-    margin: 0;
+    font-family: var(--font);
     padding: 0;
+    margin: 0;
     background: var(--primary-bg-color);
     color: var(--secondary-color);
     background-image: url("assets/bg.jpg");
@@ -193,9 +195,41 @@ button:hover {
     resize: none;
 }
 
-footer, footer p {
+footer,
+footer p {
     text-align: center;
     background-color: var(--primary-bg-color);
     margin: 0;
     padding: 5px 0;
+}
+
+/* Keep a consistent 1200x630 aspect ratio (no cropping) */
+.image {
+  width: 100%;
+  aspect-ratio: 1200 / 630;
+  background: #f6f7f9;     /* subtle letterbox backdrop */
+  border-radius: 12px;
+  overflow: hidden;        /* rounded corners apply to image */
+  display: block;
+}
+.image img {
+  width: 100%;
+  height: 100%;
+  object-fit:cover;     /* fit without cropping */
+  display: block;
+}
+
+input[type=file] {
+    display: block;
+    color: #e28ca7;
+    font-family: var(--font)
+}
+
+input[type=file]::file-selector-button {
+    padding: .6rem 1rem;
+    border-radius: 10px;
+    border: 1px solid #3a3a3a;
+    background: #ffffff;
+    color: #e28ca7;
+    cursor: pointer
 }

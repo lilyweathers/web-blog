@@ -4,8 +4,9 @@
     "title": "A Quiet Morning",
     "content": "The world felt still today. I made coffee, opened the window, and let the soft light spill in. Sometimes that’s all we need — quiet and breath.",
     "author": "Mira",
+    "likes": 11,
     "createdAt": 1759740131000,
-    "updatedAt": 1760194681735,
+    "updatedAt": 1760202609142,
     "comments": [
       {
         "id": "c1",
@@ -22,15 +23,16 @@
         "likes": 0
       }
     ],
-    "likes": 11
+    "imageUrl": "/uploads/img_1760210281138_742564.jpg"
   },
   {
     "id": "p2",
     "title": "Rain on the Glass",
     "content": "Raindrops traced stories on my window tonight. I caught myself watching them fall for too long, lost somewhere between thoughts and memories.",
     "author": "Callum",
+    "likes": 12,
     "createdAt": 1759865027000,
-    "updatedAt": 1760194681087,
+    "updatedAt": 1760203394919,
     "comments": [
       {
         "id": "c3",
@@ -40,23 +42,25 @@
         "likes": 0
       }
     ],
-    "likes": 12
+    "imageUrl": "/uploads/img_1760210243781_129730.jpg"
   },
   {
     "id": "p3",
     "title": "Wandering Steps",
     "content": "I walked without direction today — no map, no reason, just rhythm. The city hums differently when you let it guide you instead of rushing through it.",
     "author": "Rowan",
+    "likes": 5,
     "createdAt": 1759673341000,
     "updatedAt": 1759673341000,
     "comments": [],
-    "likes": 5
+    "imageUrl": "/uploads/img_1760210322332_401648.jpg"
   },
   {
     "id": "p4",
     "title": "The Weight of Silence",
     "content": "Sometimes silence isn’t empty; it’s full — of unsaid words, paused breath, and the ache of things we can’t quite name.",
     "author": "Julian",
+    "likes": 9,
     "createdAt": 1759532116000,
     "updatedAt": 1759532116000,
     "comments": [
@@ -68,13 +72,14 @@
         "likes": 0
       }
     ],
-    "likes": 9
+    "imageUrl": "/uploads/img_1760210353312_586783.jpg"
   },
   {
     "id": "p5",
     "title": "Late-Night Thoughts",
     "content": "There’s something about 2 a.m. that turns thoughts into constellations. Maybe it’s just the quiet letting us finally hear ourselves.",
     "author": "Maeve",
+    "likes": 13,
     "createdAt": 1759371276000,
     "updatedAt": 1759371276000,
     "comments": [
@@ -93,6 +98,6 @@
         "likes": 0
       }
     ],
-    "likes": 13
+    "imageUrl": "/uploads/img_1760210387232_150199.jpg"
   }
 ]
