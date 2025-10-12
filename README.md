@@ -3,7 +3,6 @@ A simple blog for posting and commenting posts with a like and delete button. Da
 
 Instructions:  
 npm init -y  
-npm install express cors nanoid  
 node server.js  
 visit localhost:3000  
   
