@@ -196,8 +196,8 @@ button:hover {
     border-radius: 8px;
     margin: .4rem 0;
     background: var(--secondary-bg-color);
+    color: var(--third-bg-color)
 }
-
 .comment .meta {
     opacity: .7
 }
