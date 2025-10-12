@@ -134,10 +134,18 @@ async function onPostsClick(e) {
 
   if (e.target.matches('button[data-edit]')) {
     const id = postEl.dataset.id;
-    const post = (STATE_POSTS || []).find(p => String(p.id) === String(id));
-    if (!post) return;
-    showEditModal(post);
-    return;
+  const post = (STATE_POSTS||[]).find(p => String(p.id)===String(id));
+  if (post) {
+    const m = document.getElementById('edit-modal');
+    if (m) {
+      (document.getElementById('edit-id')||document.querySelector('[name="edit-id"]')).value = post.id ?? '';
+      (document.getElementById('edit-title')||document.querySelector('[name="edit-title"]')).value = post.title ?? '';
+      (document.getElementById('edit-author')||document.querySelector('[name="edit-author"]')).value = post.author ?? '';
+      (document.getElementById('edit-content')||document.querySelector('[name="edit-content"]')).value = post.content ?? '';
+      m.classList.remove('hidden'); m.setAttribute('aria-hidden','false');
+    }
+  }
+  return;
   }
 
   if (e.target.closest('[data-like]')) {
