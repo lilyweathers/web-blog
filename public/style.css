@@ -2,9 +2,11 @@
     --primary-bg-color: #efc1de;
     --secondary-bg-color: #eea5b6;
     --third-bg-color: #ffebf4;
+    --fourth-bg-color: #ffccd8;
     --primary-color: #ffffff;
     --secondary-color: #e28ca7;
     --third-color: #333;
+    --paragraph-color: #784c60;
 
     --font: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
     margin: 0;
@@ -19,7 +21,7 @@ body {
     padding: 0;
     margin: 0;
     background: var(--primary-bg-color);
-    color: var(--secondary-color);
+    color: var(--paragraph-color);
     background-image: url("assets/bg.jpg");
     background-repeat: cover;
 }
@@ -92,14 +94,13 @@ textarea {
     border-radius: 8px;
     border: 1px solid var(--third-color);
     background: #ffffff;
-    color: var(--secondary-color);
+    color: var(--paragraph-color);
+    resize: none;
 }
 
 input:focus,
 textarea:focus {
-    color: var(--third-color);
-    background-color: var(--primary-bg-color);
-    outline: none;
+    outline: 4px solid var(--primary-bg-color);
 }
 
 input::placeholder,
@@ -195,8 +196,8 @@ button:hover {
     border: 1px solid var(--third-color);
     border-radius: 8px;
     margin: .4rem 0;
-    background: var(--secondary-bg-color);
-    color: var(--third-bg-color)
+    background: var(--fourth-bg-color);
+    color: var(--paragraph-color);
 }
 .comment .meta {
     opacity: .7
