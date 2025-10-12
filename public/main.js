@@ -132,6 +132,14 @@ async function onPostsClick(e) {
     }
   }
 
+  if (e.target.matches('button[data-edit]')) {
+    const id = postEl.dataset.id;
+    const post = (STATE_POSTS || []).find(p => String(p.id) === String(id));
+    if (!post) return;
+    showEditModal(post);
+    return;
+  }
+
   if (e.target.closest('[data-like]')) {
     const heart = postEl.querySelector('[data-like]');
     const countEl = postEl.querySelector('[data-like-count]');

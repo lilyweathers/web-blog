@@ -45,37 +45,37 @@
   <script src="/like.js"></script>
 
   <div id="edit-modal" class="modal hidden" aria-hidden="true">
-    <div class="modal-backdrop" data-close></div>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
-      <div class="modal-header">
-        <h3 id="edit-modal-title">Edit post</h3>
-        <button class="modal-close" data-close aria-label="Close">×</button>
-      </div>
-      <div class="modal-body">
-        <form id="edit-form">
-          <input type="hidden" id="edit-id" />
-          <div class="row">
-            <div class="field">
-              <label for="edit-title">Title</label>
-              <input type="text" id="edit-title" required />
-            </div>
-            <div class="field">
-              <label for="edit-author">Author</label>
-              <input type="text" id="edit-author" />
-            </div>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <div class="modal-header">
+      <h3 id="edit-modal-title">Edit post</h3>
+      <button class="modal-close" data-close aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="edit-form">
+        <input type="hidden" id="edit-id" />
+        <div class="row">
+          <div class="field">
+            <label for="edit-title">Title</label>
+            <input type="text" id="edit-title" required />
           </div>
           <div class="field">
-            <label for="edit-content">Content</label>
-            <textarea id="edit-content" required></textarea>
+            <label for="edit-author">Author</label>
+            <input type="text" id="edit-author" />
           </div>
-          <div class="actions">
-            <button type="button" class="btn" data-close>Cancel</button>
-            <button type="submit" class="btn primary">Update</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <div class="field">
+          <label for="edit-content">Content</label>
+          <textarea id="edit-content" required></textarea>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn" data-close>Cancel</button>
+          <button type="submit" class="btn primary">Update</button>
+        </div>
+      </form>
     </div>
   </div>
+</div>
 
 </body>
 
