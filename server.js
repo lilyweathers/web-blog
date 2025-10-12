@@ -140,6 +140,7 @@ function normalizePosts(raw) {
     content: String(p.content ?? ''),
     author: String(p.author ?? 'Anonymous'),
     likes: Number(p.likes ?? 0),
+    dislikes: Number(p.dislikes ?? 0),
     createdAt: Number(p.createdAt ?? now()),
     updatedAt: Number(p.updatedAt ?? now()),
     comments: Array.isArray(p.comments) ? p.comments : [], imageUrl: String(p.imageUrl || '')
@@ -244,6 +245,7 @@ const server = http.createServer(async (req, res) => {
             id: String(Date.now()) + Math.floor(Math.random() * 1000),
             title, content, author,
             likes: 0,
+            dislikes: 0,
             createdAt: now(),
             updatedAt: now(),
             comments: [],
@@ -318,6 +320,25 @@ const server = http.createServer(async (req, res) => {
         }).catch(err => {
           console.error(err);
           json(res, 500, { error: 'Failed to update like' });
+        });
+        return;
+      }
+
+      // 5b) POST/DELETE /api/posts/:id/dislike — dislike/undislike
+      // 5) POST/DELETE /api/posts/:id/dislike — dislike/undislike
+      if (tail === 'dislike' && (method === 'POST' || method === 'DELETE')) {
+        await queue(async () => {
+          const posts = normalizePosts(readJSON(POSTS_FILE));
+          const idx = posts.findIndex(p => String(p.id) === String(id));
+          if (idx === -1) return notFound(res, 'Post not found');
+          const delta = method === 'POST' ? +1 : -1;
+          posts[idx].dislikes = Math.max(0, (posts[idx].dislikes || 0) + delta);
+          posts[idx].updatedAt = now();
+          writeJSONAtomic(POSTS_FILE, posts);
+          json(res, 200, { id: String(id), dislikes: posts[idx].dislikes });
+        }).catch(err => {
+          console.error(err);
+          json(res, 500, { error: 'Failed to update dislike' });
         });
         return;
       }

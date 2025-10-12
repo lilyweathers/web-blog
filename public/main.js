@@ -3,6 +3,7 @@ let STATE_POSTS = [];
 
 const $ = sel => document.querySelector(sel);
 const LIKE_KEY = id => `liked:${id}`;
+const DISLIKE_KEY = id => `disliked:${id}`;
 
 const escapeHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const fmtDate = ms => ms ? new Date(ms).toLocaleString() : '';
@@ -17,6 +18,9 @@ async function fetchJSON(url, options) {
 
 function getLiked(id) { return localStorage.getItem(LIKE_KEY(id)) === '1'; }
 function setLiked(id, v) { v ? localStorage.setItem(LIKE_KEY(id), '1') : localStorage.removeItem(LIKE_KEY(id)); }
+
+function getDisliked(id) { return localStorage.getItem(DISLIKE_KEY(id)) === '1'; }
+function setDisliked(id, v) { v ? localStorage.setItem(DISLIKE_KEY(id), '1') : localStorage.removeItem(DISLIKE_KEY(id)); }
 
 async function loadPosts() {
   const data = await fetchJSON('/api/posts');
@@ -44,6 +48,10 @@ async function loadPosts() {
         <span class="like-wrap" title="Like">
           <span class="heart ${likedLocal ? 'liked' : ''}" data-like>${likedLocal ? '♥' : '♡'}</span>
           <span class="like-count" data-like-count>${p.likes || 0}</span>
+          <span class="dislike-wrap" title="Dislike">
+            <span class="thumb" data-dislike>${getDisliked(p.id) ? "👎" : "👎"}</span>
+            <span class="dislike-count" data-dislike-count>${p.dislikes || 0}</span>
+          </span>
         </span>
       </div>
       <div class="comment-list">${renderComments(p.comments || [])}</div>
@@ -122,15 +130,6 @@ async function onPostsClick(e) {
     } catch (err) {
       alert('Failed to delete: ' + err.message);
     }
-    return;
-  }
-
-  if (e.target.matches('button[data-edit]')) {
-    const id = postEl.dataset.id;
-    const post = (STATE_POSTS || []).find(p => String(p.id) === String(id));
-    if (!post) return;
-    showEditModal(post);
-    return;
   }
 
   if (e.target.closest('[data-like]')) {
@@ -151,6 +150,26 @@ async function onPostsClick(e) {
       if (heart) heart.textContent = wasLiked ? '♥' : '♡';
       if (countEl) countEl.textContent = String(cur);
       alert('Failed to update like: ' + err.message);
+    }
+  }
+
+  // Dislike toggle
+  if (e.target.closest('[data-dislike]')) {
+    const thumb = postEl.querySelector('[data-dislike]');
+    const countEl = postEl.querySelector('[data-dislike-count]');
+    const was = getDisliked(id);
+    const next = !was;
+    const cur = Number(countEl?.textContent || 0);
+    if (countEl) countEl.textContent = String(Math.max(0, cur + (next ? 1 : -1)));
+    if (thumb) thumb.textContent = next ? '👎' : '👎';
+    setDisliked(id, next);
+    try {
+      await fetchJSON(`/api/posts/${encodeURIComponent(id)}/dislike`, { method: next ? 'POST' : 'DELETE' });
+    } catch (err) {
+      setDisliked(id, was);
+      if (thumb) thumb.textContent = was ? '👎' : '👎';
+      if (countEl) countEl.textContent = String(cur);
+      alert('Failed to update dislike: ' + err.message);
     }
     return;
   }
