@@ -179,6 +179,10 @@ button:hover {
     text-align: right
 }
 
+.thumb {
+    cursor: pointer;
+}
+
 .comment-list {
     margin-top: .5rem;
     border-top: 1px dashed var(--third-color);
