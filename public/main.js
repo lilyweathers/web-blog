@@ -1,13 +1,67 @@
-let STATE_POSTS = [];
-// Client script: render posts, create/edit/delete, like, comments, with images.
+/**
+ * main.js — Client-side controller for the blog
+ * -------------------------------------------------------------------------
+ * Responsibilities
+ *  - Fetch posts from the server and render them (newest first)
+ *  - Create new posts (with optional image upload)
+ *  - Edit existing posts via a modal dialog
+ *  - Delete posts
+ *  - Like/Dislike toggles with optimistic UI + local remembered state
+ *  - Comment creation per post
+ *
+ * How data flows
+ *  - Server persistence lives in /data/posts.json behind simple REST endpoints:
+ *      GET    /api/posts
+ *      POST   /api/posts
+ *      PUT    /api/posts/:id
+ *      DELETE /api/posts/:id
+ *      POST   /api/posts/:id/like     | DELETE /api/posts/:id/like
+ *      POST   /api/posts/:id/dislike  | DELETE /api/posts/:id/dislike
+ *      POST   /api/posts/:id/comments
+ *      POST   /api/uploads  (accepts { dataUrl } and returns { url })
+ *
+ * Patterns used
+ *  - Event delegation: a single click/submit listener deals with many buttons/forms.
+ *  - Optimistic UI: likes/dislikes flip immediately and roll back on failure.
+ *  - Defensive networking: fetchJSON raises rich errors and tolerates 204 No Content.
+ */
 
+let STATE_POSTS = []; // Client-side cache of the latest list returned by GET /api/posts
+
+// Short-hand selector. Used sparingly for top-level hooks.
 const $ = sel => document.querySelector(sel);
+
+// Keys for remembering local like/dislike state per post (independent of server count)
 const LIKE_KEY = id => `liked:${id}`;
 const DISLIKE_KEY = id => `disliked:${id}`;
 
-const escapeHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// -----------------------------------------------------------------------------
+// Tiny utilities
+// -----------------------------------------------------------------------------
+
+/**
+ * escapeHtml(str)
+ * Ensure user-provided strings (titles, content, author names) are rendered safely.
+ */
+const escapeHtml = s =>
+  String(s).replace(/&/g, '&amp;')
+           .replace(/</g, '&lt;')
+           .replace(/>/g, '&gt;');
+
+/**
+ * fmtDate(ms)
+ * Pretty-print a millisecond timestamp using the browser locale.
+ */
 const fmtDate = ms => ms ? new Date(ms).toLocaleString() : '';
 
+/**
+ * fetchJSON(url, options)
+ * A defensive wrapper around fetch:
+ *  - Always sends JSON Content-Type unless overridden.
+ *  - Throws a readable Error for non-2xx responses.
+ *  - Returns parsed JSON if Content-Type is JSON, otherwise text.
+ *  - Treats 204 No Content as a successful `null` result.
+ */
 async function fetchJSON(url, options) {
   const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
   if (res.status === 204) return null;
@@ -16,26 +70,55 @@ async function fetchJSON(url, options) {
   return type.includes('application/json') ? res.json() : res.text();
 }
 
+/**
+ * Local remembered state for like/dislike (so the heart/thumb stays consistent
+ * on this device even before/after a server roundtrip).
+ */
 function getLiked(id) { return localStorage.getItem(LIKE_KEY(id)) === '1'; }
 function setLiked(id, v) { v ? localStorage.setItem(LIKE_KEY(id), '1') : localStorage.removeItem(LIKE_KEY(id)); }
 
 function getDisliked(id) { return localStorage.getItem(DISLIKE_KEY(id)) === '1'; }
 function setDisliked(id, v) { v ? localStorage.setItem(DISLIKE_KEY(id), '1') : localStorage.removeItem(DISLIKE_KEY(id)); }
 
+// -----------------------------------------------------------------------------
+// Loading + Rendering
+// -----------------------------------------------------------------------------
+
+/**
+ * loadPosts()
+ * 1) GET the full posts list
+ * 2) Cache it in STATE_POSTS (used by the Edit modal to prefill fields)
+ * 3) Sort newest-first by createdAt
+ * 4) Render each post into #posts (with like/dislike + comment UI)
+ */
 async function loadPosts() {
   const data = await fetchJSON('/api/posts');
-  STATE_POSTS = Array.isArray(data) ? data.slice() : []; const posts = data.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  // Keep an immutable snapshot so we can search by id for edit-prefill
+  STATE_POSTS = Array.isArray(data) ? data.slice() : [];
+
+  // Display newest first (fallback to 0 if missing createdAt)
+  const posts = data.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
   const root = $('#posts');
   if (!root) return;
+
+  // Clear and re-render in one pass for simplicity
   root.innerHTML = '<h2>Posts</h2>';
   for (const p of posts) {
     const likedLocal = getLiked(p.id);
+
+    // Build one post element
     const div = document.createElement('div');
     div.className = 'post';
-    div.dataset.id = p.id;
+    div.dataset.id = p.id; // critical: used to target server actions
+
+    // Prefer the post's imageUrl; otherwise show the placeholder
     div.innerHTML = `
       <h3>${escapeHtml(p.title || '')}</h3>
-      ${p.imageUrl ? `<div class="image"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" /></div>` : `<div class="image"><img src="/uploads/placeholder.svg" alt="" loading="lazy" /></div>`}
+      ${p.imageUrl
+          ? `<div class="image"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" /></div>`
+          : `<div class="image"><img src="/uploads/placeholder.svg" alt="" loading="lazy" /></div>`}
       <div class="meta">
         <strong>${escapeHtml(p.author || 'Anonymous')}</strong>
         ${p.createdAt ? ' • ' + fmtDate(p.createdAt) : ''}
@@ -61,10 +144,17 @@ async function loadPosts() {
         <button type="submit">Comment</button>
       </form>
     `;
+
     root.appendChild(div);
   }
 }
 
+/**
+ * renderComments(comments)
+ * Renders the comment thread for a single post.
+ * - Empty state message when no comments.
+ * - Otherwise, chronological order (oldest → newest).
+ */
 function renderComments(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
     return `<div class="comment" style="opacity:.7">No comments yet. Be the first!</div>`;
@@ -72,20 +162,42 @@ function renderComments(comments) {
   return comments
     .slice()
     .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
-    .map(c => `<div class="comment"><div class="meta">${escapeHtml(c.author || 'Anonymous')}${c.createdAt ? ' • ' + fmtDate(c.createdAt) : ''}</div>${escapeHtml(c.content || '')}</div>`)
+    .map(c => `<div class="comment">
+                 <div class="meta">${escapeHtml(c.author || 'Anonymous')}${c.createdAt ? ' • ' + fmtDate(c.createdAt) : ''}</div>
+                 ${escapeHtml(c.content || '')}
+               </div>`)
     .join('');
 }
 
+// -----------------------------------------------------------------------------
+// New Post creation
+// -----------------------------------------------------------------------------
+
+/**
+ * onSubmitNewPost(e)
+ * Handles the "New Post" form:
+ *  - Validates title & content
+ *  - If an image file is chosen, uploads it via /api/uploads and uses returned URL
+ *  - POST /api/posts with { title, content, author, imageUrl }
+ *  - Resets the form and refreshes the list
+ */
 async function onSubmitNewPost(e) {
   e.preventDefault();
-  const title = document.getElementById('title')?.value.trim();
+
+  // Read form values
+  const title   = document.getElementById('title')?.value.trim();
   const content = document.getElementById('content')?.value.trim();
-  const author = document.getElementById('author')?.value.trim();
+  const author  = document.getElementById('author')?.value.trim();
   const fileInput = document.getElementById('image');
-  if (!title || !content) { alert('Please provide a title and content'); return; }
+
+  if (!title || !content) {
+    alert('Please provide a title and content');
+    return;
+  }
 
   let imageUrl = '';
   try {
+    // If a file is selected, convert to data URL and ask server to save it
     if (fileInput?.files?.[0]) {
       const dataUrl = await fileToDataUrl(fileInput.files[0]);
       const up = await fetch('/api/uploads', {
@@ -95,12 +207,16 @@ async function onSubmitNewPost(e) {
       });
       if (!up.ok) throw new Error(await up.text() || 'Upload failed');
       const out = await up.json();
-      imageUrl = out.url || '';
+      imageUrl = out.url || ''; // server returns the public URL (e.g., /uploads/xxx.jpg)
     }
+
+    // Create the post itself
     await fetchJSON('/api/posts', {
       method: 'POST',
       body: JSON.stringify({ title, content, author, imageUrl })
     });
+
+    // Reset & refresh
     document.getElementById('post-form')?.reset();
     await loadPosts();
   } catch (err) {
@@ -108,6 +224,10 @@ async function onSubmitNewPost(e) {
   }
 }
 
+/**
+ * fileToDataUrl(file)
+ * Utility to convert a File into a base64 data URL for transport to the server.
+ */
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -117,11 +237,25 @@ function fileToDataUrl(file) {
   });
 }
 
+// -----------------------------------------------------------------------------
+// Post list interactions (delete, edit, like, dislike)
+// -----------------------------------------------------------------------------
+
+/**
+ * onPostsClick(e)
+ * A single delegated click handler bound to the #posts container.
+ * Routes actions by checking target matches on:
+ *  - [data-delete] → DELETE /api/posts/:id
+ *  - [data-edit]   → open modal pre-filled from STATE_POSTS
+ *  - [data-like]   → optimistic like toggle + POST/DELETE /like
+ *  - [data-dislike]→ optimistic dislike toggle + POST/DELETE /dislike
+ */
 async function onPostsClick(e) {
   const postEl = e.target.closest('.post');
   if (!postEl) return;
   const id = postEl.dataset.id;
 
+  // --- Delete ---------------------------------------------------------------
   if (e.target.matches('button[data-delete]')) {
     if (!confirm('Delete this post?')) return;
     try {
@@ -132,32 +266,40 @@ async function onPostsClick(e) {
     }
   }
 
+  // --- Edit (open modal) ----------------------------------------------------
   if (e.target.matches('button[data-edit]')) {
     const id = postEl.dataset.id;
-  const post = (STATE_POSTS||[]).find(p => String(p.id)===String(id));
-  if (post) {
-    const m = document.getElementById('edit-modal');
-    if (m) {
-      (document.getElementById('edit-id')||document.querySelector('[name="edit-id"]')).value = post.id ?? '';
-      (document.getElementById('edit-title')||document.querySelector('[name="edit-title"]')).value = post.title ?? '';
-      (document.getElementById('edit-author')||document.querySelector('[name="edit-author"]')).value = post.author ?? '';
-      (document.getElementById('edit-content')||document.querySelector('[name="edit-content"]')).value = post.content ?? '';
-      m.classList.remove('hidden'); m.setAttribute('aria-hidden','false');
+    const post = (STATE_POSTS||[]).find(p => String(p.id)===String(id));
+    if (post) {
+      const m = document.getElementById('edit-modal');
+      if (m) {
+        (document.getElementById('edit-id')    || document.querySelector('[name="edit-id"]')).value     = post.id ?? '';
+        (document.getElementById('edit-title') || document.querySelector('[name="edit-title"]')).value  = post.title ?? '';
+        (document.getElementById('edit-author')|| document.querySelector('[name="edit-author"]')).value = post.author ?? '';
+        (document.getElementById('edit-content')||document.querySelector('[name="edit-content"]')).value= post.content ?? '';
+        m.classList.remove('hidden');
+        m.setAttribute('aria-hidden','false');
+      }
     }
-  }
-  return;
+    return; // stop early so this click doesn't bubble into other handlers
   }
 
+  // --- Like (optimistic toggle with rollback) -------------------------------
   if (e.target.closest('[data-like]')) {
-    const heart = postEl.querySelector('[data-like]');
+    const heart   = postEl.querySelector('[data-like]');
     const countEl = postEl.querySelector('[data-like-count]');
-    const wasLiked = getLiked(id);
+
+    const wasLiked  = getLiked(id);
     const nextLiked = !wasLiked;
     const cur = parseInt(countEl?.textContent || '0', 10) || 0;
+
+    // Immediate UI change
     heart?.classList.toggle('liked', nextLiked);
     if (heart) heart.textContent = nextLiked ? '♥' : '♡';
     if (countEl) countEl.textContent = String(Math.max(0, cur + (nextLiked ? 1 : -1)));
     setLiked(id, nextLiked);
+
+    // Persist to server, roll back if it fails
     try {
       await fetchJSON(`/api/posts/${encodeURIComponent(id)}/like`, { method: nextLiked ? 'POST' : 'DELETE' });
     } catch (err) {
@@ -169,21 +311,26 @@ async function onPostsClick(e) {
     }
   }
 
-  // Dislike toggle
+  // --- Dislike (optimistic toggle with rollback) ----------------------------
   if (e.target.closest('[data-dislike]')) {
-    const thumb = postEl.querySelector('[data-dislike]');
+    const thumb   = postEl.querySelector('[data-dislike]');
     const countEl = postEl.querySelector('[data-dislike-count]');
+
     const was = getDisliked(id);
     const next = !was;
     const cur = Number(countEl?.textContent || 0);
+
+    // Immediate UI change
     if (countEl) countEl.textContent = String(Math.max(0, cur + (next ? 1 : -1)));
-    if (thumb) thumb.textContent = next ? '👎' : '👎';
+    if (thumb)   thumb.textContent   = next ? '👎' : '👎';
     setDisliked(id, next);
+
+    // Persist to server, roll back on error
     try {
       await fetchJSON(`/api/posts/${encodeURIComponent(id)}/dislike`, { method: next ? 'POST' : 'DELETE' });
     } catch (err) {
       setDisliked(id, was);
-      if (thumb) thumb.textContent = was ? '👎' : '👎';
+      if (thumb)   thumb.textContent   = was ? '👎' : '👎';
       if (countEl) countEl.textContent = String(cur);
       alert('Failed to update dislike: ' + err.message);
     }
@@ -191,17 +338,33 @@ async function onPostsClick(e) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Comment submission (per-post form in the list)
+// -----------------------------------------------------------------------------
+
+/**
+ * onPostsSubmit(e)
+ * Handles the small comment form under each post:
+ *  - POST /api/posts/:id/comments with { content, author }
+ *  - Resets the form and reloads the post list
+ */
 async function onPostsSubmit(e) {
   const form = e.target.closest('form[data-comment]');
   if (!form) return;
   e.preventDefault();
+
   const postEl = e.target.closest('.post');
   const id = postEl?.dataset.id;
+
   const content = form.querySelector('textarea[name="content"]')?.value.trim();
-  const author = form.querySelector('input[name="author"]')?.value.trim();
+  const author  = form.querySelector('input[name="author"]')?.value.trim();
   if (!content) return;
+
   try {
-    await fetchJSON(`/api/posts/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify({ content, author }) });
+    await fetchJSON(`/api/posts/${encodeURIComponent(id)}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, author })
+    });
     form.reset();
     await loadPosts();
   } catch (err) {
@@ -209,31 +372,53 @@ async function onPostsSubmit(e) {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Wire up page-level listeners
+// -----------------------------------------------------------------------------
+
+// New Post form
 document.getElementById('post-form')?.addEventListener('submit', onSubmitNewPost);
+
+// Post list (delegation for delete/edit/like/dislike)
 document.getElementById('posts')?.addEventListener('click', onPostsClick);
+
+// Per-post comment form (delegation)
 document.getElementById('posts')?.addEventListener('submit', onPostsSubmit);
 
+// Initial load with error display fallback (never leave a blank screen)
 (async () => {
-  try { await loadPosts(); }
-  catch (err) {
+  try {
+    await loadPosts();
+  } catch (err) {
     const root = document.getElementById('posts');
     if (root) root.innerHTML = `<div class="post">Failed to load posts: ${escapeHtml(err.message || String(err))}</div>`;
     console.error(err);
   }
 })();
 
+// -----------------------------------------------------------------------------
+// Edit modal helpers & submit
+// -----------------------------------------------------------------------------
 
+/**
+ * showEditModal(post)
+ * Fill the modal inputs with the selected post and reveal the dialog.
+ */
 function showEditModal(post) {
   const modal = document.getElementById('edit-modal');
   if (!modal) return;
-  document.getElementById('edit-id').value = post.id || '';
-  document.getElementById('edit-title').value = post.title || '';
-  document.getElementById('edit-author').value = post.author || 'Anonymous';
+  document.getElementById('edit-id').value      = post.id || '';
+  document.getElementById('edit-title').value   = post.title || '';
+  document.getElementById('edit-author').value  = post.author || 'Anonymous';
   document.getElementById('edit-content').value = post.content || '';
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
 }
 
+/**
+ * hideEditModal()
+ * Hide the dialog and keep markup in the DOM for next use.
+ */
 function hideEditModal() {
   const modal = document.getElementById('edit-modal');
   if (!modal) return;
@@ -241,23 +426,32 @@ function hideEditModal() {
   modal.setAttribute('aria-hidden', 'true');
 }
 
+// Close modal on either the X button or clicking the backdrop
 document.addEventListener('click', (e) => {
-  if (e.target.matches('#edit-modal [data-close]')) {
-    hideEditModal();
-  }
-  if (e.target.matches('#edit-modal .modal-backdrop')) {
-    hideEditModal();
-  }
+  if (e.target.matches('#edit-modal [data-close]')) hideEditModal();
+  if (e.target.matches('#edit-modal .modal-backdrop')) hideEditModal();
 });
 
-// Submit edit form -> PUT update
+/**
+ * Submit the Edit form:
+ *  - PUT /api/posts/:id with { title, author, content }
+ *  - Close the modal and refresh the posts
+ * Note: Bound directly since the modal exists at load in this project.
+ *       If markup order changes, switch to delegated 'submit' (document-level).
+ */
 document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const id = document.getElementById('edit-id')?.value;
-  const title = document.getElementById('edit-title')?.value.trim();
-  const author = document.getElementById('edit-author')?.value.trim();
+
+  const id      = document.getElementById('edit-id')?.value;
+  const title   = document.getElementById('edit-title')?.value.trim();
+  const author  = document.getElementById('edit-author')?.value.trim();
   const content = document.getElementById('edit-content')?.value.trim();
-  if (!id || !title || !content) { alert('Please fill out Title and Content'); return; }
+
+  if (!id || !title || !content) {
+    alert('Please fill out Title and Content');
+    return;
+  }
+
   try {
     await fetchJSON(`/api/posts/${encodeURIComponent(id)}`, {
       method: 'PUT',
@@ -270,7 +464,14 @@ document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
   }
 });
 
-// Collapsible New Post form
+// -----------------------------------------------------------------------------
+// Collapsible "New Post" panel
+// -----------------------------------------------------------------------------
+
+/**
+ * Toggle the visibility of the New Post form when the + button is pressed.
+ * Uses aria-expanded for accessibility and the [hidden] attribute for CSS.
+ */
 document.addEventListener('click', function /*__NP_COLLAPSE_TOGGLE__*/(e) {
   const btn = e.target.closest('#np-toggle');
   if (!btn) return;
