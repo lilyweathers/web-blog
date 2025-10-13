@@ -199,6 +199,7 @@ button:hover {
     background: var(--fourth-bg-color);
     color: var(--paragraph-color);
 }
+
 .comment .meta {
     opacity: .7
 }
@@ -285,6 +286,12 @@ input[type=file]::file-selector-button:hover {
     z-index: 10000;
 }
 
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+}
+
 .modal-backdrop {
     position: absolute;
     inset: 0;
@@ -316,6 +323,7 @@ input[type=file]::file-selector-button:hover {
 .modal-close {
     background: transparent;
     border: none;
+    color: var(--primary-color);
     font-size: 1.25rem;
     cursor: pointer;
 }
@@ -383,6 +391,33 @@ input[type=file]::file-selector-button:hover {
 .btn:hover,
 .btn.primary:hover {
     background-color: var(--primary-bg-color);
+}
+
+/* Inline delete modal */
+
+.delete-modal-card {
+    overflow: hidden;
+    position: relative;
+    z-index: 61;
+    max-width: 520px;
+    margin: 10vh auto;
+    padding: 1rem 1.25rem;
+    color: var(--primary-color);
+    background: var(--secondary-bg-color);
+    border-radius: 10px;
+    border: 1px solid var(--third-color);
+    box-shadow: 0 24px 50px var(--third-color);
+}
+
+.delete-modal-close {
+    position: absolute;
+    top: .5rem;
+    right: .5rem;
+    background: transparent;
+    border: 0;
+    color: var(--primary-color);
+    font-size: 1.25rem;
+    cursor: pointer;
 }
 
 /* Collapsible New Post box */

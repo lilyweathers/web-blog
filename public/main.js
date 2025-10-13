@@ -45,8 +45,8 @@ const DISLIKE_KEY = id => `disliked:${id}`;
  */
 const escapeHtml = s =>
   String(s).replace(/&/g, '&amp;')
-           .replace(/</g, '&lt;')
-           .replace(/>/g, '&gt;');
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
 /**
  * fmtDate(ms)
@@ -117,8 +117,8 @@ async function loadPosts() {
     div.innerHTML = `
       <h3>${escapeHtml(p.title || '')}</h3>
       ${p.imageUrl
-          ? `<div class="image"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" /></div>`
-          : `<div class="image"><img src="/uploads/placeholder.svg" alt="" loading="lazy" /></div>`}
+        ? `<div class="image"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" /></div>`
+        : `<div class="image"><img src="/uploads/placeholder.svg" alt="" loading="lazy" /></div>`}
       <div class="meta">
         <strong>${escapeHtml(p.author || 'Anonymous')}</strong>
         ${p.createdAt ? ' • ' + fmtDate(p.createdAt) : ''}
@@ -185,9 +185,9 @@ async function onSubmitNewPost(e) {
   e.preventDefault();
 
   // Read form values
-  const title   = document.getElementById('title')?.value.trim();
+  const title = document.getElementById('title')?.value.trim();
   const content = document.getElementById('content')?.value.trim();
-  const author  = document.getElementById('author')?.value.trim();
+  const author = document.getElementById('author')?.value.trim();
   const fileInput = document.getElementById('image');
 
   if (!title || !content) {
@@ -257,28 +257,28 @@ async function onPostsClick(e) {
 
   // --- Delete ---------------------------------------------------------------
   if (e.target.matches('button[data-delete]')) {
-    if (!confirm('Delete this post?')) return;
-    try {
-      await fetchJSON(`/api/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      await loadPosts();
-    } catch (err) {
-      alert('Failed to delete: ' + err.message);
+    if (e.target.matches('button[data-delete]')) {
+      const postEl = e.target.closest('.post');
+      const id = postEl?.dataset.id;
+      const title = postEl?.querySelector('h3')?.textContent || '';
+      showDeleteModal({ id, title });
+      return; // stop here so it doesn't fall through to other actions
     }
   }
 
   // --- Edit (open modal) ----------------------------------------------------
   if (e.target.matches('button[data-edit]')) {
     const id = postEl.dataset.id;
-    const post = (STATE_POSTS||[]).find(p => String(p.id)===String(id));
+    const post = (STATE_POSTS || []).find(p => String(p.id) === String(id));
     if (post) {
       const m = document.getElementById('edit-modal');
       if (m) {
-        (document.getElementById('edit-id')    || document.querySelector('[name="edit-id"]')).value     = post.id ?? '';
-        (document.getElementById('edit-title') || document.querySelector('[name="edit-title"]')).value  = post.title ?? '';
-        (document.getElementById('edit-author')|| document.querySelector('[name="edit-author"]')).value = post.author ?? '';
-        (document.getElementById('edit-content')||document.querySelector('[name="edit-content"]')).value= post.content ?? '';
+        (document.getElementById('edit-id') || document.querySelector('[name="edit-id"]')).value = post.id ?? '';
+        (document.getElementById('edit-title') || document.querySelector('[name="edit-title"]')).value = post.title ?? '';
+        (document.getElementById('edit-author') || document.querySelector('[name="edit-author"]')).value = post.author ?? '';
+        (document.getElementById('edit-content') || document.querySelector('[name="edit-content"]')).value = post.content ?? '';
         m.classList.remove('hidden');
-        m.setAttribute('aria-hidden','false');
+        m.setAttribute('aria-hidden', 'false');
       }
     }
     return; // stop early so this click doesn't bubble into other handlers
@@ -286,10 +286,10 @@ async function onPostsClick(e) {
 
   // --- Like (optimistic toggle with rollback) -------------------------------
   if (e.target.closest('[data-like]')) {
-    const heart   = postEl.querySelector('[data-like]');
+    const heart = postEl.querySelector('[data-like]');
     const countEl = postEl.querySelector('[data-like-count]');
 
-    const wasLiked  = getLiked(id);
+    const wasLiked = getLiked(id);
     const nextLiked = !wasLiked;
     const cur = parseInt(countEl?.textContent || '0', 10) || 0;
 
@@ -313,7 +313,7 @@ async function onPostsClick(e) {
 
   // --- Dislike (optimistic toggle with rollback) ----------------------------
   if (e.target.closest('[data-dislike]')) {
-    const thumb   = postEl.querySelector('[data-dislike]');
+    const thumb = postEl.querySelector('[data-dislike]');
     const countEl = postEl.querySelector('[data-dislike-count]');
 
     const was = getDisliked(id);
@@ -322,7 +322,7 @@ async function onPostsClick(e) {
 
     // Immediate UI change
     if (countEl) countEl.textContent = String(Math.max(0, cur + (next ? 1 : -1)));
-    if (thumb)   thumb.textContent   = next ? '👎' : '👎';
+    if (thumb) thumb.textContent = next ? '👎' : '👎';
     setDisliked(id, next);
 
     // Persist to server, roll back on error
@@ -330,7 +330,7 @@ async function onPostsClick(e) {
       await fetchJSON(`/api/posts/${encodeURIComponent(id)}/dislike`, { method: next ? 'POST' : 'DELETE' });
     } catch (err) {
       setDisliked(id, was);
-      if (thumb)   thumb.textContent   = was ? '👎' : '👎';
+      if (thumb) thumb.textContent = was ? '👎' : '👎';
       if (countEl) countEl.textContent = String(cur);
       alert('Failed to update dislike: ' + err.message);
     }
@@ -357,7 +357,7 @@ async function onPostsSubmit(e) {
   const id = postEl?.dataset.id;
 
   const content = form.querySelector('textarea[name="content"]')?.value.trim();
-  const author  = form.querySelector('input[name="author"]')?.value.trim();
+  const author = form.querySelector('input[name="author"]')?.value.trim();
   if (!content) return;
 
   try {
@@ -407,9 +407,9 @@ document.getElementById('posts')?.addEventListener('submit', onPostsSubmit);
 function showEditModal(post) {
   const modal = document.getElementById('edit-modal');
   if (!modal) return;
-  document.getElementById('edit-id').value      = post.id || '';
-  document.getElementById('edit-title').value   = post.title || '';
-  document.getElementById('edit-author').value  = post.author || 'Anonymous';
+  document.getElementById('edit-id').value = post.id || '';
+  document.getElementById('edit-title').value = post.title || '';
+  document.getElementById('edit-author').value = post.author || 'Anonymous';
   document.getElementById('edit-content').value = post.content || '';
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
@@ -442,9 +442,9 @@ document.addEventListener('click', (e) => {
 document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const id      = document.getElementById('edit-id')?.value;
-  const title   = document.getElementById('edit-title')?.value.trim();
-  const author  = document.getElementById('edit-author')?.value.trim();
+  const id = document.getElementById('edit-id')?.value;
+  const title = document.getElementById('edit-title')?.value.trim();
+  const author = document.getElementById('edit-author')?.value.trim();
   const content = document.getElementById('edit-content')?.value.trim();
 
   if (!id || !title || !content) {
@@ -461,6 +461,93 @@ document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
     await loadPosts();
   } catch (err) {
     alert('Failed to update: ' + (err.message || err));
+  }
+});
+
+// Edit Modal close keydown
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('edit-modal');
+  if (!modal || modal.classList.contains('hidden')) return;
+
+  if (e.key === 'Escape') {
+    hideEditModal();
+  }
+
+  if (e.key === 'Tab') {
+    // simple trap within modal
+    const focusables = modal.querySelectorAll('a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])');
+    const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
+    if (!list.length) return;
+    const first = list[0], last = list[list.length - 1];
+    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+    else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+  }
+});
+
+// -----------------------------------------------------------------------------
+// Delete modal helpers & submit
+// -----------------------------------------------------------------------------
+
+function showDeleteModal({ id, title }) {
+  const modal = document.getElementById('delete-modal');
+  if (!modal) return;
+  document.getElementById('delete-id').value = id;
+  document.getElementById('delete-post-title').textContent = title || '(untitled)';
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+
+  // focus first meaningful control (Delete)
+  setTimeout(() => document.getElementById('delete-confirm')?.focus(), 0);
+}
+
+function hideDeleteModal() {
+  const modal = document.getElementById('delete-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+// Close modal on either the X button or clicking the backdrop
+document.addEventListener('click', (e) => {
+  if (e.target.matches('#delete-modal [data-close]')) hideDeleteModal();
+  if (e.target.matches('#delete-modal .modal-backdrop')) hideEDeleterModal();
+});
+
+/**
+ * Confirm the deletion:
+ *  - DELETE /api/posts/:id
+ *  - Close the modal and refresh the posts
+ */
+document.getElementById('delete-confirm')?.addEventListener('click', async () => {
+  const id = document.getElementById('delete-id')?.value;
+  if (!id) return;
+  try {
+    await fetchJSON(`/api/posts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    hideDeleteModal();
+    await loadPosts();
+  } catch (err) {
+    // optional: toast instead of alert
+    alert('Failed to delete: ' + (err.message || err));
+  }
+});
+
+// Delete modal close keydown
+document.addEventListener('keydown', (e) => {
+  const modal = document.getElementById('delete-modal');
+  if (!modal || modal.classList.contains('hidden')) return;
+
+  if (e.key === 'Escape') {
+    hideDeleteModal();
+  }
+
+  if (e.key === 'Tab') {
+    // simple trap within modal
+    const focusables = modal.querySelectorAll('a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])');
+    const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
+    if (!list.length) return;
+    const first = list[0], last = list[list.length - 1];
+    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
+    else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
   }
 });
 

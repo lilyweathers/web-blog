@@ -44,6 +44,7 @@
     <p>Lily Sainte-Claire &copy 2025</p>
   </footer>
 
+  <!-- Edit Modal -->
   <div id="edit-modal" class="modal hidden" aria-hidden="true">
   <div class="modal-backdrop" data-close></div>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
@@ -77,6 +78,27 @@
   </div>
 </div>
 
+<!-- Delete Modal -->
+<div id="delete-modal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-desc">
+  <div class="modal-backdrop" data-close></div>
+  <div class="delete-modal-card">
+    <button type="button" class="delete-modal-close" data-close aria-label="Close">×</button>
+
+    <h3 id="delete-title">Delete post?</h3>
+    <p id="delete-desc" style="opacity:.85; margin:.5rem 0 1rem;">
+      This action can’t be undone. You’re about to delete:
+      <strong id="delete-post-title">—</strong>
+    </p>
+
+    <!-- holds the target id -->
+    <input type="hidden" id="delete-id" />
+
+    <div class="modal-actions" style="display:flex; gap:.5rem; justify-content:flex-end;">
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="button" id="delete-confirm" class="btn danger">Delete</button>
+    </div>
+  </div>
+</div>
 </body>
 
 </html>
