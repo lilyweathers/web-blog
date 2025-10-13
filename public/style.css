@@ -98,8 +98,8 @@ textarea {
     resize: none;
 }
 
-input:focus,
-textarea:focus {
+input:focus, select:focus,
+textarea:focus, button:focus {
     outline: 4px solid var(--primary-bg-color);
 }
 

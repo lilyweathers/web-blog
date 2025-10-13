@@ -464,26 +464,6 @@ document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
   }
 });
 
-// Edit Modal close keydown
-document.addEventListener('keydown', (e) => {
-  const modal = document.getElementById('edit-modal');
-  if (!modal || modal.classList.contains('hidden')) return;
-
-  if (e.key === 'Escape') {
-    hideEditModal();
-  }
-
-  if (e.key === 'Tab') {
-    // simple trap within modal
-    const focusables = modal.querySelectorAll('a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])');
-    const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
-    if (!list.length) return;
-    const first = list[0], last = list[list.length - 1];
-    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
-    else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
-  }
-});
-
 // -----------------------------------------------------------------------------
 // Delete modal helpers & submit
 // -----------------------------------------------------------------------------
@@ -531,23 +511,89 @@ document.getElementById('delete-confirm')?.addEventListener('click', async () =>
   }
 });
 
-// Delete modal close keydown
+// -----------------------------------------------------------------------------
+// Modal close keydown
+// -----------------------------------------------------------------------------
+
+function getOpenModal() {
+  return document.querySelector('.modal:not(.hidden)');
+}
+
+// Focus the first meaningful element in a modal
+function focusFirstIn(modal) {
+  if (!modal) return;
+  const focusables = modal.querySelectorAll(
+    'a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+  );
+  for (const el of focusables) {
+    // skip hidden/disabled
+    const style = window.getComputedStyle(el);
+    if (el.disabled) continue;
+    if (style.display === 'none' || style.visibility === 'hidden') continue;
+    el.focus();
+    break;
+  }
+}
+
+// Remember the element that opened the modal; restore it on close
+function openModal(modal) {
+  if (!modal) return;
+  modal.dataset.prevFocus = (document.activeElement && document.activeElement.id) || '';
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  // focus after it’s visible
+  requestAnimationFrame(() => focusFirstIn(modal));
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+  const prevId = modal.dataset.prevFocus || '';
+  if (prevId) {
+    const prev = document.getElementById(prevId);
+    if (prev) prev.focus();
+  }
+}
+
 document.addEventListener('keydown', (e) => {
-  const modal = document.getElementById('delete-modal');
-  if (!modal || modal.classList.contains('hidden')) return;
+  const modal = getOpenModal();
+  if (!modal) return; // no modal open
 
   if (e.key === 'Escape') {
-    hideDeleteModal();
+    closeModal(modal);
+    return;
   }
 
-  if (e.key === 'Tab') {
-    // simple trap within modal
-    const focusables = modal.querySelectorAll('a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])');
-    const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
-    if (!list.length) return;
-    const first = list[0], last = list[list.length - 1];
-    if (e.shiftKey && document.activeElement === first) { last.focus(); e.preventDefault(); }
-    else if (!e.shiftKey && document.activeElement === last) { first.focus(); e.preventDefault(); }
+  if (e.key !== 'Tab') return;
+
+  // Collect focusable elements inside the open modal
+  const all = Array.from(
+    modal.querySelectorAll('a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])')
+  ).filter(el => {
+    const cs = window.getComputedStyle(el);
+    return !el.disabled && cs.display !== 'none' && cs.visibility !== 'hidden';
+  });
+
+  if (!all.length) return;
+
+  const first = all[0];
+  const last  = all[all.length - 1];
+
+  // If focus has left the modal (rare), bring it back
+  if (!modal.contains(document.activeElement)) {
+    first.focus();
+    e.preventDefault();
+    return;
+  }
+
+  // Wrap focus
+  if (e.shiftKey && document.activeElement === first) {
+    last.focus();
+    e.preventDefault();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    first.focus();
+    e.preventDefault();
   }
 });
 
