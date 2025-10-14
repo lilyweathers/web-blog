@@ -532,32 +532,35 @@ label {
 
 /* Base: keep your existing .modal styles; we only add transitions */
 .modal {
-  /* when hidden, we turn off pointer events (JS will toggle classes) */
-  pointer-events: none;
+    /* when hidden, we turn off pointer events (JS will toggle classes) */
+    pointer-events: none;
 }
+
 .modal.modal--open {
-  pointer-events: auto;
+    pointer-events: auto;
 }
 
 /* Backdrop fades */
 .modal .modal-backdrop {
-  opacity: 0;
-  transition: opacity 200ms ease;
+    opacity: 0;
+    transition: opacity 200ms ease;
 }
+
 .modal.modal--open .modal-backdrop {
-  opacity: 1;
+    opacity: 1;
 }
 
 /* Card enters with slight rise + scale + fade */
 .modal .modal-card {
-  transform: translateY(8px) scale(0.98);
-  opacity: 0;
-  transition: transform 220ms ease, opacity 200ms ease;
-  will-change: transform, opacity;
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+    transition: transform 220ms ease, opacity 200ms ease;
+    will-change: transform, opacity;
 }
+
 .modal.modal--open .modal-card {
-  transform: translateY(0) scale(1);
-  opacity: 1;
+    transform: translateY(0) scale(1);
+    opacity: 1;
 }
 
 /* Respect users who prefer reduced motion */
@@ -566,8 +569,21 @@ label {
     #post-form {
         transition: none !important;
     }
+
     .modal .modal-backdrop,
-  .modal .modal-card {
-    transition: none !important;
-  }
+    .modal .modal-card {
+        transition: none !important;
+    }
 }
+
+/* Empty-state message for posts list */
+.empty {
+    padding: 1rem;
+    border: 1px dashed #374151;
+    border-radius: 10px;
+    text-align: center;
+    color: #9CA3AF;
+    background: rgba(17, 24, 39, 0.35);
+    margin: .5rem 0;
+}
+.modal.modal--open { pointer-events: auto; }

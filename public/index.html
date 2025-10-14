@@ -57,7 +57,6 @@
         <div class="posts-toolbar" role="region" aria-label="Search and sort posts">
           <label class="sr-only" for="post-search">Search posts</label>
           <input id="post-search" type="search" placeholder="Search title, author, content…" autocomplete="off" />
-          <button id="post-clear" class="btn ghost" title="Clear search" aria-label="Clear search">×</button>
           <label class="sr-only" for="post-sort">Sort</label>
           <select id="post-sort" aria-label="Sort posts">
             <option value="newest">Newest</option>
@@ -110,7 +109,7 @@
   <div id="delete-modal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true"
     aria-labelledby="delete-title" aria-describedby="delete-desc">
     <div class="modal-backdrop" data-close></div>
-    <div class="delete-modal-card">
+    <div class="modal-card delete-modal-card">
       <button type="button" class="delete-modal-close" data-close aria-label="Close">×</button>
 
       <h3 id="delete-title">Delete post?</h3>

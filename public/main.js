@@ -1,3 +1,12 @@
+/*
+ * File: main.js
+ * Purpose: Client-side logic for the blog (rendering, search/sort, likes, comments, modals).
+ * Notes:
+ *  - All DOM writes are scoped to #list to avoid wiping the toolbar/new-post UI.
+ *  - Event listeners are delegated so re-rendered elements continue to work.
+ *  - Animations respect prefers-reduced-motion when possible.
+ *  - This file was annotated on 2025-10-14 for clarity.
+ */
 /**
  * main.js — Client-side controller for the blog
  * -------------------------------------------------------------------------
@@ -39,29 +48,26 @@ const DISLIKE_KEY = id => `disliked:${id}`;
 // Tiny utilities
 // -----------------------------------------------------------------------------
 
-/**
- * escapeHtml(str)
- * Ensure user-provided strings (titles, content, author names) are rendered safely.
- */
+// escapeHtml(str)
+// Ensure user-provided strings (titles, content, author names) are rendered safely.
 const escapeHtml = s =>
   String(s).replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-/**
- * fmtDate(ms)
- * Pretty-print a millisecond timestamp using the browser locale.
- */
+
+// fmtDate(ms)
+// Pretty-print a millisecond timestamp using the browser locale.
 const fmtDate = ms => ms ? new Date(ms).toLocaleString() : '';
 
-/**
- * fetchJSON(url, options)
- * A defensive wrapper around fetch:
- *  - Always sends JSON Content-Type unless overridden.
- *  - Throws a readable Error for non-2xx responses.
- *  - Returns parsed JSON if Content-Type is JSON, otherwise text.
- *  - Treats 204 No Content as a successful `null` result.
- */
+// fetchJSON(url, options)
+// A defensive wrapper around fetch:
+// - Always sends JSON Content-Type unless overridden.
+// - Throws a readable Error for non-2xx responses.
+// - Returns parsed JSON if Content-Type is JSON, otherwise text.
+// - Treats 204 No Content as a successful `null` result.
+
+// Fetch a JSON endpoint and throw a helpful error if the HTTP request fails.
 async function fetchJSON(url, options) {
   const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
   if (res.status === 204) return null;
@@ -70,33 +76,50 @@ async function fetchJSON(url, options) {
   return type.includes('application/json') ? res.json() : res.text();
 }
 
-/**
- * Local remembered state for like/dislike (so the heart/thumb stays consistent
- * on this device even before/after a server roundtrip).
- */
+
+// Local remembered state for like/dislike (so the heart/thumb stays consistent
+// on this device even before/after a server roundtrip).
+
+// Read the local like state for a post id (from localStorage).
 function getLiked(id) { return localStorage.getItem(LIKE_KEY(id)) === '1'; }
+
+// Write the local like state for a post id (into localStorage).
 function setLiked(id, v) { v ? localStorage.setItem(LIKE_KEY(id), '1') : localStorage.removeItem(LIKE_KEY(id)); }
 
+// Read the local dislike state for a post id (from localStorage).
 function getDisliked(id) { return localStorage.getItem(DISLIKE_KEY(id)) === '1'; }
+
+
+// Write the local dislike state for a post id (into localStorage).
 function setDisliked(id, v) { v ? localStorage.setItem(DISLIKE_KEY(id), '1') : localStorage.removeItem(DISLIKE_KEY(id)); }
 
 // -----------------------------------------------------------------------------
 // Loading + Rendering
 // -----------------------------------------------------------------------------
 
-/**
- * loadPosts()
- * 1) GET the full posts list
- * 2) Cache it in STATE_POSTS (used by the Edit modal to prefill fields)
- * 3) Sort newest-first by createdAt
- * 4) Render each post into #posts (with like/dislike + comment UI)
- */
+//
+// loadPosts()
+// 1) GET the full posts list
+// 2) Cache it in STATE_POSTS (used by the Edit modal to prefill fields)
+// 4) Render each post into #posts (with like/dislike + comment UI)
+
+// Render a given array of posts into the #list container using renderPost() for each item.
 function renderPostsList(posts) {
-  const list = document.getElementById('list');
-  if (!list) return;
-  list.innerHTML = (posts || []).map(renderPost).join('');
+
+  const els = (typeof getToolbarEls === 'function') ? getToolbarEls() : { list: document.getElementById('list') };
+  const listEl = els.list;
+  if (!listEl) return;
+  const arr = Array.isArray(posts) ? posts : [];
+  if (!arr.length) {
+    listEl.innerHTML = '<div class="empty">No posts found.</div>';
+    return;
+  }
+  const html = arr.map(renderPost).join('');
+  listEl.innerHTML = html;
+
 }
 
+// Return the HTML string for a single post card: title, image (or placeholder), meta, content, controls, and comments.
 function renderPost(p) {
   const likedLocal = getLiked(p.id); // local heart state
 
@@ -104,8 +127,8 @@ function renderPost(p) {
     <div class="post" data-id="${escapeHtml(p.id)}">
       <h3>${escapeHtml(p.title || '')}</h3>
       ${p.imageUrl
-        ? `<div class="image"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" /></div>`
-        : `<div class="image"><img src="/uploads/placeholder.svg" alt="" loading="lazy" /></div>`}
+      ? `<div class="image"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" /></div>`
+      : `<div class="image"><img src="/uploads/placeholder.svg" alt="" loading="lazy" /></div>`}
       <div class="meta">
         <strong>${escapeHtml(p.author || 'Anonymous')}</strong>
         ${p.createdAt ? ' • ' + fmtDate(p.createdAt) : ''}
@@ -134,33 +157,39 @@ function renderPost(p) {
   `;
 }
 
-// ---------- Search + Sort state ----------
+// -----------------------------------------------------------------------------
+// Search + Sort state 
+// -----------------------------------------------------------------------------
+
 let UI_SEARCH = '';
 let UI_SORT = 'newest';
 
-function getToolbarEls(){
+// Return references to #posts and #list containers that already exist in the DOM.
+function getToolbarEls() {
   return {
     search: document.getElementById('post-search'),
     clear: document.getElementById('post-clear'),
     sort: document.getElementById('post-sort'),
     list: document.querySelector('#posts #list')
   };
+// Debounce helper: delay calls to `fn` until no invocation occurs for `wait` ms.
 }
 
 function debounce(fn, wait) {
-  let t; 
-  return function() {
+  let t;
+  return function () {
     const args = arguments;
     clearTimeout(t);
-    t = setTimeout(function(){ fn.apply(null, args); }, wait || 300);
+    t = setTimeout(function () { fn.apply(null, args); }, wait || 300);
   };
+// Compute the current view (filtered/sorted posts) based on UI state.
 }
 
 function computeView() {
   const q = (UI_SEARCH || '').trim().toLowerCase();
   let rows = Array.isArray(STATE_POSTS) ? STATE_POSTS.slice() : [];
   if (q) {
-    rows = rows.filter(function(p){
+    rows = rows.filter(function (p) {
       const title = (p.title || '').toLowerCase();
       const author = (p.author || '').toLowerCase();
       const content = (p.content || '').toLowerCase();
@@ -168,48 +197,51 @@ function computeView() {
     });
   }
   switch (UI_SORT) {
-    case 'oldest': rows.sort(function(a,b){ return (a.createdAt||0)-(b.createdAt||0); }); break;
-    case 'liked': rows.sort(function(a,b){ return (b.likes||0)-(a.likes||0); }); break;
-    case 'commented': rows.sort(function(a,b){ 
+    case 'oldest': rows.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); }); break;
+    case 'liked': rows.sort(function (a, b) { return (b.likes || 0) - (a.likes || 0); }); break;
+    case 'commented': rows.sort(function (a, b) {
       const bc = Array.isArray(b.comments) ? b.comments.length : 0;
       const ac = Array.isArray(a.comments) ? a.comments.length : 0;
       return bc - ac;
     }); break;
-    case 'az': rows.sort(function(a,b){ return String(a.title||'').localeCompare(String(b.title||'')); }); break;
+    case 'az': rows.sort(function (a, b) { return String(a.title || '').localeCompare(String(b.title || '')); }); break;
     case 'newest':
-    default: rows.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }); break;
+    default: rows.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); break;
   }
   return rows;
+// Convert a millisecond delta into a human-readable relative time (e.g., '3m ago').
 }
 
 function fmtWhen(ms) {
-  try { return new Date(ms || Date.now()).toLocaleString(); } catch(e) { return ''; }
+  try { return new Date(ms || Date.now()).toLocaleString(); } catch (e) { return ''; }
 }
 
-/**
- * renderComments(comments)
- * Renders the comment thread for a single post.
- * - Empty state message when no comments.
- * - Otherwise, chronological order (oldest → newest).
- */
+//
+// renderComments(comments)
+// Renders the comment thread for a single post.
+// - Empty state message when no comments.
+// - Otherwise, chronological order (oldest → newest).
 
+
+// Return the HTML string for the comment list of a post.
 function renderComments(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
     return '<div class="comment" style="opacity:.7">No comments yet. Be the first!</div>';
   }
   var out = [];
-  for (var i=0; i<comments.length; i++) {
+  for (var i = 0; i < comments.length; i++) {
     var c = comments[i];
     out.push(
       '<div class="comment">' +
-        '<div class="meta">' + escapeHtml(c.author || 'Anonymous') + (c.createdAt ? (' • ' + fmtWhen(c.createdAt)) : '') + '</div>' +
-        escapeHtml(c.content || '') +
+      '<div class="meta">' + escapeHtml(c.author || 'Anonymous') + (c.createdAt ? (' • ' + fmtWhen(c.createdAt)) : '') + '</div>' +
+      escapeHtml(c.content || '') +
       '</div>'
     );
   }
   return out.join('');
 }
 
+// Re-compute the posts to show (e.g., apply search/sort) and then render the list.
 function refreshPosts() {
   renderPostsList(computeView());
 }
@@ -217,9 +249,11 @@ function refreshPosts() {
 // -----------------------------
 // Load + event wiring
 // -----------------------------
-document.addEventListener('DOMContentLoaded', function(){
+
+// App bootstrap: wire up events and kick off the initial load after HTML is parsed.
+document.addEventListener('DOMContentLoaded', function () {
   // Initial load
-  loadPosts().catch(function(err){
+  loadPosts().catch(function (err) {
     var list = document.querySelector('#posts #list');
     if (list) list.innerHTML = '<div class="post" style="color:#b91c1c">Failed to load posts: ' + escapeHtml(err.message || String(err)) + '</div>';
     console.error(err);
@@ -227,12 +261,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // Toolbar
   var els = getToolbarEls();
-  if (els.search) els.search.addEventListener('input', debounce(function(){
+  if (els.search) els.search.addEventListener('input', debounce(function () {
     UI_SEARCH = els.search.value || '';
     refreshPosts();
   }, 200));
 
-  if (els.clear) els.clear.addEventListener('click', function(){
+  if (els.clear) els.clear.addEventListener('click', function () {
     var e2 = getToolbarEls();
     if (e2.search) e2.search.value = '';
     UI_SEARCH = '';
@@ -240,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (e2.search) e2.search.focus();
   });
 
-  if (els.sort) els.sort.addEventListener('change', function(){
+  if (els.sort) els.sort.addEventListener('change', function () {
     UI_SORT = els.sort.value || 'newest';
     refreshPosts();
   });
@@ -249,10 +283,29 @@ document.addEventListener('DOMContentLoaded', function(){
 // -----------------------------
 // API helpers
 // -----------------------------
+
+// Fetch posts from the server, cache them in STATE_POSTS, then draw the UI (via refreshPosts() or renderFromState()).
 async function loadPosts() {
-  var data = await fetchJSON('/api/posts');
-  STATE_POSTS = Array.isArray(data) ? data.slice() : [];
-  refreshPosts();
+
+  const els = (typeof getToolbarEls === 'function') ? getToolbarEls() : { list: document.getElementById('list') };
+  if (els.list) els.list.innerHTML = '';
+  try {
+    const data = await fetchJSON('/api/posts');
+    STATE_POSTS = Array.isArray(data) ? data.slice() : [];
+    if (typeof refreshPosts === 'function') {
+      refreshPosts();
+    } else {
+      renderFromState();
+    }
+  } catch (err) {
+    if (els.list) {
+      const msg = (err && err.message) ? err.message : String(err);
+      els.list.innerHTML = '<div class="post">Failed to load posts: ' + escapeHtml(msg) + '</div>';
+    }
+    console.error(err);
+  }
+
+// Toggle like state for a post (optimistic UI) and sync with the server.
 }
 
 async function toggleLike(id, buttonEl) {
@@ -270,11 +323,13 @@ async function toggleLike(id, buttonEl) {
     if (buttonEl) buttonEl.textContent = (isLiked ? '♥ Liked (' : '♡ Like (') + String(before) + ')';
     throw err;
   }
+// Delete a post by id on the server, update local state, then re-render.
 }
 
 async function deletePost(id) {
   await fetchJSON('/api/posts/' + encodeURIComponent(id), { method: 'DELETE' });
   await loadPosts();
+// Add a new comment to a post on the server, update state, then re-render the post.
 }
 
 async function addComment(id, author, content) {
@@ -283,10 +338,11 @@ async function addComment(id, author, content) {
     body: JSON.stringify({ author: author, content: content })
   });
   await loadPosts();
+// Look up and return a post object in STATE_POSTS by id.
 }
 
 function findPost(id) {
-  for (var i=0; i<STATE_POSTS.length; i++) {
+  for (var i = 0; i < STATE_POSTS.length; i++) {
     if (String(STATE_POSTS[i].id) === String(id)) return STATE_POSTS[i];
   }
   return null;
@@ -296,14 +352,12 @@ function findPost(id) {
 // New Post creation
 // -----------------------------------------------------------------------------
 
-/**
- * onSubmitNewPost(e)
- * Handles the "New Post" form:
- *  - Validates title & content
- *  - If an image file is chosen, uploads it via /api/uploads and uses returned URL
- *  - POST /api/posts with { title, content, author, imageUrl }
- *  - Resets the form and refreshes the list
- */
+// onSubmitNewPost(e)
+// Handles the "New Post" form:
+//  - Validates title & content
+//  - If an image file is chosen, uploads it via /api/uploads and uses returned URL
+//  - POST /api/posts with { title, content, author, imageUrl }
+//  - Resets the form and refreshes the list
 async function onSubmitNewPost(e) {
   e.preventDefault();
 
@@ -347,10 +401,8 @@ async function onSubmitNewPost(e) {
   }
 }
 
-/**
- * fileToDataUrl(file)
- * Utility to convert a File into a base64 data URL for transport to the server.
- */
+// fileToDataUrl(file)
+// Utility to convert a File into a base64 data URL for transport to the server.
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -364,15 +416,12 @@ function fileToDataUrl(file) {
 // Post list interactions (delete, edit, like, dislike)
 // -----------------------------------------------------------------------------
 
-/**
- * onPostsClick(e)
- * A single delegated click handler bound to the #posts container.
- * Routes actions by checking target matches on:
- *  - [data-delete] → DELETE /api/posts/:id
- *  - [data-edit]   → open modal pre-filled from STATE_POSTS
- *  - [data-like]   → optimistic like toggle + POST/DELETE /like
- *  - [data-dislike]→ optimistic dislike toggle + POST/DELETE /dislike
- */
+// onPostsClick(e)
+// A single delegated click handler bound to the #posts container.
+// Routes actions by checking target matches on:
+//  - [data-delete] → DELETE /api/posts/:id
+//  - [data-edit]   → open modal pre-filled from STATE_POSTS
+//  - [data-like]   → optimistic like toggle + POST/DELETE /like
 async function onPostsClick(e) {
   const postEl = e.target.closest('.post');
   if (!postEl) return;
@@ -401,8 +450,8 @@ async function onPostsClick(e) {
         (document.getElementById('edit-author') || document.querySelector('[name="edit-author"]')).value = post.author ?? '';
         (document.getElementById('edit-content') || document.querySelector('[name="edit-content"]')).value = post.content ?? '';
         openModal(m);
-  requestAnimationFrame(() => document.getElementById('edit-title')?.focus());
-}
+        requestAnimationFrame(() => document.getElementById('edit-title')?.focus());
+      }
     }
     return; // stop early so this click doesn't bubble into other handlers
   }
@@ -465,12 +514,9 @@ async function onPostsClick(e) {
 // Comment submission (per-post form in the list)
 // -----------------------------------------------------------------------------
 
-/**
- * onPostsSubmit(e)
- * Handles the small comment form under each post:
- *  - POST /api/posts/:id/comments with { content, author }
- *  - Resets the form and reloads the post list
- */
+// onPostsSubmit(e)
+// Handles the small comment form under each post:
+// - Resets the form and reloads the post list
 async function onPostsSubmit(e) {
   const form = e.target.closest('form[data-comment]');
   if (!form) return;
@@ -523,26 +569,25 @@ document.getElementById('posts')?.addEventListener('submit', onPostsSubmit);
 // Edit modal helpers & submit
 // -----------------------------------------------------------------------------
 
-/**
- * showEditModal(post)
- * Fill the modal inputs with the selected post and reveal the dialog.
- */
+// showEditModal(post)
+//  Fill the modal inputs with the selected post and reveal the dialog.
+// Populate the Edit modal with the selected post's data and open it (focus lands on the title field).
 function showEditModal(post) {
   const modal = document.getElementById('edit-modal');
   if (!modal) return;
-  document.getElementById('edit-id').value      = post.id || '';
-  document.getElementById('edit-title').value   = post.title || '';
-  document.getElementById('edit-author').value  = post.author || 'Anonymous';
+  document.getElementById('edit-id').value = post.id || '';
+  document.getElementById('edit-title').value = post.title || '';
+  document.getElementById('edit-author').value = post.author || 'Anonymous';
   document.getElementById('edit-content').value = post.content || '';
   openModal(modal);
   // focus first field after open
   requestAnimationFrame(() => document.getElementById('edit-title')?.focus());
 }
 
-/**
- * hideEditModal()
- * Hide the dialog and keep markup in the DOM for next use.
- */
+
+// hideEditModal()
+// Hide the dialog and keep markup in the DOM for next use.
+// Close the Edit modal using the animated close helper.
 function hideEditModal() {
   const modal = document.getElementById('edit-modal');
   if (!modal) return;
@@ -556,13 +601,11 @@ document.addEventListener('click', (e) => {
   if (e.target.matches('#edit-modal .modal-backdrop')) hideEditModal();
 });
 
-/**
- * Submit the Edit form:
- *  - PUT /api/posts/:id with { title, author, content }
- *  - Close the modal and refresh the posts
- * Note: Bound directly since the modal exists at load in this project.
- *       If markup order changes, switch to delegated 'submit' (document-level).
- */
+// Submit the Edit form:
+// - PUT /api/posts/:id with { title, author, content }
+// - Close the modal and refresh the posts
+// Note: Bound directly since the modal exists at load in this project.
+//       If markup order changes, switch to delegated 'submit' (document-level).
 document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -592,6 +635,7 @@ document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
 // Delete modal helpers & submit
 // -----------------------------------------------------------------------------
 
+// Populate the Delete modal with the selected post's info (id/title) and open it.
 function showDeleteModal({ id, title }) {
   const modal = document.getElementById('delete-modal');
   if (!modal) return;
@@ -601,11 +645,11 @@ function showDeleteModal({ id, title }) {
   requestAnimationFrame(() => document.getElementById('delete-confirm')?.focus());
 }
 
+// Close the Delete modal using the animated close helper.
 function hideDeleteModal() {
   const modal = document.getElementById('delete-modal');
   if (!modal) return;
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden', 'true');
+  closeModal(modal); // removes .modal--open, waits for transitionend, then hides
 }
 
 // Close modal on either the X button or clicking the backdrop
@@ -614,11 +658,10 @@ document.addEventListener('click', (e) => {
   if (e.target.matches('#delete-modal .modal-backdrop')) hideDeleteModal();
 });
 
-/**
- * Confirm the deletion:
- *  - DELETE /api/posts/:id
- *  - Close the modal and refresh the posts
- */
+
+// Confirm the deletion:
+// - DELETE /api/posts/:id
+// - Close the modal and refresh the posts
 document.getElementById('delete-confirm')?.addEventListener('click', async () => {
   const id = document.getElementById('delete-id')?.value;
   if (!id) return;
@@ -657,26 +700,87 @@ function focusFirstIn(modal) {
 }
 
 // Remember the element that opened the modal; restore it on close
+// Unhide a modal and add an 'open' class so CSS can animate its entrance; also stores the previous focus to restore it later.
+
 function openModal(modal) {
   if (!modal) return;
+
+  // remember last focus (for restoration after close)
   modal.dataset.prevFocus = (document.activeElement && document.activeElement.id) || '';
+
+  // make visible, then animate in on next frame
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
-  // focus after it’s visible
-  requestAnimationFrame(() => focusFirstIn(modal));
+  requestAnimationFrame(() => {
+    modal.classList.add('modal--open');
+  });
+
+  // Ensure the modal can receive key events and focus
+  if (!modal.hasAttribute('tabindex')) modal.setAttribute('tabindex', '-1');
+  try { modal.focus({ preventScroll: true }); } catch {}
+
+  // Per-modal ESC handler (bind & store for cleanup)
+  const escHandler = (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    if (modal.id === 'delete-modal') hideDeleteModal();
+    else if (modal.id === 'edit-modal') hideEditModal();
+  };
+  modal._escHandler = escHandler;
+  modal.addEventListener('keydown', escHandler);
+  document.addEventListener('keydown', escHandler);
 }
+
+
+// Close a modal with animation: remove 'modal--open', wait transition, hide, restore focus.
+// Start the modal exit animation, then hide it on transitionend and restore focus to the opener.
 
 function closeModal(modal) {
   if (!modal) return;
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden', 'true');
-  const prevId = modal.dataset.prevFocus || '';
-  if (prevId) {
-    const prev = document.getElementById(prevId);
-    if (prev) prev.focus();
+
+  // cleanup ESC listeners bound in openModal
+  const esc = modal._escHandler;
+  if (esc) {
+    modal.removeEventListener('keydown', esc);
+    document.removeEventListener('keydown', esc);
+    delete modal._escHandler;
   }
+
+  // start exit transition
+  modal.classList.remove('modal--open');
+
+  // transition target: support either .modal-card or .delete-modal-card
+  const card = modal.querySelector('.modal-card, .delete-modal-card') || modal;
+
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+
+    // restore focus
+    const prevId = modal.dataset.prevFocus;
+    if (prevId) {
+      const prev = document.getElementById(prevId);
+      if (prev) prev.focus();
+    }
+  };
+
+  const onEnd = (e) => {
+    if (e && e.target !== card) return;
+    card.removeEventListener('transitionend', onEnd);
+    finish();
+  };
+  card.addEventListener('transitionend', onEnd);
+
+  // Fallback in case transitionend doesn't fire
+  setTimeout(finish, 400);
 }
 
+
+
+// Esc key listener
 document.addEventListener('keydown', (e) => {
   const modal = getOpenModal();
   if (!modal) return; // no modal open
@@ -699,7 +803,7 @@ document.addEventListener('keydown', (e) => {
   if (!all.length) return;
 
   const first = all[0];
-  const last  = all[all.length - 1];
+  const last = all[all.length - 1];
 
   // If focus has left the modal (rare), bring it back
   if (!modal.contains(document.activeElement)) {
@@ -718,56 +822,94 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// -----------------------------------------------------------------------------
 // Generic modal open/close with animation.
 // Assumes markup: <div id="...-modal" class="modal hidden"> 
 // with children .modal-backdrop and .modal-card
+// -----------------------------------------------------------------------------
+
+
 function openModal(modal) {
   if (!modal) return;
-  // remember last focus
+
+  // remember last focus (for restoration after close)
   modal.dataset.prevFocus = (document.activeElement && document.activeElement.id) || '';
 
-  // make it measurable/interactive
+  // make visible, then animate in on next frame
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
-
-  // next frame: toggle the open state so transitions run
   requestAnimationFrame(() => {
     modal.classList.add('modal--open');
   });
+
+  // Ensure the modal can receive key events and focus
+  if (!modal.hasAttribute('tabindex')) modal.setAttribute('tabindex', '-1');
+  try { modal.focus({ preventScroll: true }); } catch {}
+
+  // Per-modal ESC handler (bind & store for cleanup)
+  const escHandler = (e) => {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    if (modal.id === 'delete-modal') hideDeleteModal();
+    else if (modal.id === 'edit-modal') hideEditModal();
+  };
+  modal._escHandler = escHandler;
+  modal.addEventListener('keydown', escHandler);
+  document.addEventListener('keydown', escHandler);
 }
+
+
 
 function closeModal(modal) {
   if (!modal) return;
 
-  // start closing animation by removing the open flag
+  // cleanup ESC listeners bound in openModal
+  const esc = modal._escHandler;
+  if (esc) {
+    modal.removeEventListener('keydown', esc);
+    document.removeEventListener('keydown', esc);
+    delete modal._escHandler;
+  }
+
+  // start exit transition
   modal.classList.remove('modal--open');
 
-  // when the card finishes its transform/opacity transition, hide the modal
+  // transition target: support either .modal-card or .delete-modal-card
   const card = modal.querySelector('.modal-card') || modal;
-  const onEnd = (e) => {
-    if (e.target !== card || (e.propertyName !== 'opacity' && e.propertyName !== 'transform')) return;
-    card.removeEventListener('transitionend', onEnd);
+
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
 
-    // restore focus back to the opener, if we captured an id
+    // restore focus
     const prevId = modal.dataset.prevFocus;
     if (prevId) {
       const prev = document.getElementById(prevId);
       if (prev) prev.focus();
     }
   };
+
+  const onEnd = (e) => {
+    if (e && e.target !== card) return;
+    card.removeEventListener('transitionend', onEnd);
+    finish();
+  };
   card.addEventListener('transitionend', onEnd);
+
+  // Fallback in case transitionend doesn't fire
+  setTimeout(finish, 400);
 }
+
 
 // -----------------------------------------------------------------------------
 // Collapsible "New Post" panel
 // -----------------------------------------------------------------------------
 
-/**
- * Toggle the visibility of the New Post form when the + button is pressed.
- * Uses aria-expanded for accessibility and the [hidden] attribute for CSS.
- */
+// Toggle the visibility of the New Post form when the + button is pressed.
+// Uses aria-expanded for accessibility and the [hidden] attribute for CSS.
 document.addEventListener('click', function /*__NP_COLLAPSE_TOGGLE__*/(e) {
   const btn = e.target.closest('#np-toggle');
   if (!btn) return;
@@ -777,11 +919,6 @@ document.addEventListener('click', function /*__NP_COLLAPSE_TOGGLE__*/(e) {
   const expanded = btn.getAttribute('aria-expanded') === 'true';
   btn.setAttribute('aria-expanded', String(!expanded));
 
-  // OLD (instant)
-  // if (expanded) form.setAttribute('hidden', '');
-  // else form.removeAttribute('hidden');
-
-  // NEW (animated)
   if (expanded) {
     collapseForm(form);
   } else {
@@ -789,7 +926,13 @@ document.addEventListener('click', function /*__NP_COLLAPSE_TOGGLE__*/(e) {
   }
 });
 
+
+// -----------------------------------------------------------------------------
 // --- Animated show/hide for #post-form ---
+// -----------------------------------------------------------------------------
+
+
+// Animate opening of the New Post form using height+opacity transition and keep it in an 'open' state.
 function expandForm(el) {
   if (!el) return;
 
@@ -817,6 +960,7 @@ function expandForm(el) {
   });
 }
 
+// Animate closing of the New Post form, set hidden at the end of the transition for accessibility.
 function collapseForm(el) {
   if (!el) return;
 
@@ -839,4 +983,18 @@ function collapseForm(el) {
       el.style.opacity = '';
     });
   });
+}
+
+// Render posts from STATE_POSTS after filtering/sorting based on current UI controls.
+function renderFromState() {
+
+  const els = (typeof getToolbarEls === 'function') ? getToolbarEls() : { list: document.getElementById('list') };
+  const listEl = els.list;
+  if (!listEl) return;
+  const arr = (typeof filterAndSort === 'function') ? filterAndSort(STATE_POSTS) : (Array.isArray(STATE_POSTS) ? STATE_POSTS : []);
+  if (!arr.length) {
+    listEl.innerHTML = '<div class="empty">No posts found.</div>';
+    return;
+  }
+  listEl.innerHTML = arr.map(renderPost).join('');
 }
