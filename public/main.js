@@ -91,30 +91,17 @@ function setDisliked(id, v) { v ? localStorage.setItem(DISLIKE_KEY(id), '1') : l
  * 3) Sort newest-first by createdAt
  * 4) Render each post into #posts (with like/dislike + comment UI)
  */
-async function loadPosts() {
-  const data = await fetchJSON('/api/posts');
+function renderPostsList(posts) {
+  const list = document.getElementById('list');
+  if (!list) return;
+  list.innerHTML = (posts || []).map(renderPost).join('');
+}
 
-  // Keep an immutable snapshot so we can search by id for edit-prefill
-  STATE_POSTS = Array.isArray(data) ? data.slice() : [];
+function renderPost(p) {
+  const likedLocal = getLiked(p.id); // local heart state
 
-  // Display newest first (fallback to 0 if missing createdAt)
-  const posts = data.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-  const root = $('#posts');
-  if (!root) return;
-
-  // Clear and re-render in one pass for simplicity
-  root.innerHTML = '<h2>Posts</h2>';
-  for (const p of posts) {
-    const likedLocal = getLiked(p.id);
-
-    // Build one post element
-    const div = document.createElement('div');
-    div.className = 'post';
-    div.dataset.id = p.id; // critical: used to target server actions
-
-    // Prefer the post's imageUrl; otherwise show the placeholder
-    div.innerHTML = `
+  return `
+    <div class="post" data-id="${escapeHtml(p.id)}">
       <h3>${escapeHtml(p.title || '')}</h3>
       ${p.imageUrl
         ? `<div class="image"><img src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy" /></div>`
@@ -143,10 +130,60 @@ async function loadPosts() {
         <textarea name="content" placeholder="Add a comment…" required></textarea>
         <button type="submit">Comment</button>
       </form>
-    `;
+    </div>
+  `;
+}
 
-    root.appendChild(div);
+// ---------- Search + Sort state ----------
+let UI_SEARCH = '';
+let UI_SORT = 'newest';
+
+function getToolbarEls(){
+  return {
+    search: document.getElementById('post-search'),
+    clear: document.getElementById('post-clear'),
+    sort: document.getElementById('post-sort'),
+    list: document.querySelector('#posts #list')
+  };
+}
+
+function debounce(fn, wait) {
+  let t; 
+  return function() {
+    const args = arguments;
+    clearTimeout(t);
+    t = setTimeout(function(){ fn.apply(null, args); }, wait || 300);
+  };
+}
+
+function computeView() {
+  const q = (UI_SEARCH || '').trim().toLowerCase();
+  let rows = Array.isArray(STATE_POSTS) ? STATE_POSTS.slice() : [];
+  if (q) {
+    rows = rows.filter(function(p){
+      const title = (p.title || '').toLowerCase();
+      const author = (p.author || '').toLowerCase();
+      const content = (p.content || '').toLowerCase();
+      return title.indexOf(q) !== -1 || author.indexOf(q) !== -1 || content.indexOf(q) !== -1;
+    });
   }
+  switch (UI_SORT) {
+    case 'oldest': rows.sort(function(a,b){ return (a.createdAt||0)-(b.createdAt||0); }); break;
+    case 'liked': rows.sort(function(a,b){ return (b.likes||0)-(a.likes||0); }); break;
+    case 'commented': rows.sort(function(a,b){ 
+      const bc = Array.isArray(b.comments) ? b.comments.length : 0;
+      const ac = Array.isArray(a.comments) ? a.comments.length : 0;
+      return bc - ac;
+    }); break;
+    case 'az': rows.sort(function(a,b){ return String(a.title||'').localeCompare(String(b.title||'')); }); break;
+    case 'newest':
+    default: rows.sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); }); break;
+  }
+  return rows;
+}
+
+function fmtWhen(ms) {
+  try { return new Date(ms || Date.now()).toLocaleString(); } catch(e) { return ''; }
 }
 
 /**
@@ -155,18 +192,104 @@ async function loadPosts() {
  * - Empty state message when no comments.
  * - Otherwise, chronological order (oldest → newest).
  */
+
 function renderComments(comments) {
   if (!Array.isArray(comments) || comments.length === 0) {
-    return `<div class="comment" style="opacity:.7">No comments yet. Be the first!</div>`;
+    return '<div class="comment" style="opacity:.7">No comments yet. Be the first!</div>';
   }
-  return comments
-    .slice()
-    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
-    .map(c => `<div class="comment">
-                 <div class="meta">${escapeHtml(c.author || 'Anonymous')}${c.createdAt ? ' • ' + fmtDate(c.createdAt) : ''}</div>
-                 ${escapeHtml(c.content || '')}
-               </div>`)
-    .join('');
+  var out = [];
+  for (var i=0; i<comments.length; i++) {
+    var c = comments[i];
+    out.push(
+      '<div class="comment">' +
+        '<div class="meta">' + escapeHtml(c.author || 'Anonymous') + (c.createdAt ? (' • ' + fmtWhen(c.createdAt)) : '') + '</div>' +
+        escapeHtml(c.content || '') +
+      '</div>'
+    );
+  }
+  return out.join('');
+}
+
+function refreshPosts() {
+  renderPostsList(computeView());
+}
+
+// -----------------------------
+// Load + event wiring
+// -----------------------------
+document.addEventListener('DOMContentLoaded', function(){
+  // Initial load
+  loadPosts().catch(function(err){
+    var list = document.querySelector('#posts #list');
+    if (list) list.innerHTML = '<div class="post" style="color:#b91c1c">Failed to load posts: ' + escapeHtml(err.message || String(err)) + '</div>';
+    console.error(err);
+  });
+
+  // Toolbar
+  var els = getToolbarEls();
+  if (els.search) els.search.addEventListener('input', debounce(function(){
+    UI_SEARCH = els.search.value || '';
+    refreshPosts();
+  }, 200));
+
+  if (els.clear) els.clear.addEventListener('click', function(){
+    var e2 = getToolbarEls();
+    if (e2.search) e2.search.value = '';
+    UI_SEARCH = '';
+    refreshPosts();
+    if (e2.search) e2.search.focus();
+  });
+
+  if (els.sort) els.sort.addEventListener('change', function(){
+    UI_SORT = els.sort.value || 'newest';
+    refreshPosts();
+  });
+});
+
+// -----------------------------
+// API helpers
+// -----------------------------
+async function loadPosts() {
+  var data = await fetchJSON('/api/posts');
+  STATE_POSTS = Array.isArray(data) ? data.slice() : [];
+  refreshPosts();
+}
+
+async function toggleLike(id, buttonEl) {
+  if (!id) return;
+  // Simple optimistic toggle: check text contains 'Liked'
+  var isLiked = buttonEl && buttonEl.textContent.indexOf('Liked') !== -1;
+  var cur = findPost(id);
+  var before = (cur && cur.likes) || 0;
+  if (buttonEl) buttonEl.textContent = (isLiked ? '♡ Like (' : '♥ Liked (') + String(before + (isLiked ? -1 : 1)) + ')';
+
+  try {
+    await fetchJSON('/api/posts/' + encodeURIComponent(id) + '/like', { method: isLiked ? 'DELETE' : 'POST' });
+    await loadPosts();
+  } catch (err) {
+    if (buttonEl) buttonEl.textContent = (isLiked ? '♥ Liked (' : '♡ Like (') + String(before) + ')';
+    throw err;
+  }
+}
+
+async function deletePost(id) {
+  await fetchJSON('/api/posts/' + encodeURIComponent(id), { method: 'DELETE' });
+  await loadPosts();
+}
+
+async function addComment(id, author, content) {
+  await fetchJSON('/api/posts/' + encodeURIComponent(id) + '/comments', {
+    method: 'POST',
+    body: JSON.stringify({ author: author, content: content })
+  });
+  await loadPosts();
+}
+
+function findPost(id) {
+  for (var i=0; i<STATE_POSTS.length; i++) {
+    if (String(STATE_POSTS[i].id) === String(id)) return STATE_POSTS[i];
+  }
+  return null;
 }
 
 // -----------------------------------------------------------------------------
@@ -277,9 +400,9 @@ async function onPostsClick(e) {
         (document.getElementById('edit-title') || document.querySelector('[name="edit-title"]')).value = post.title ?? '';
         (document.getElementById('edit-author') || document.querySelector('[name="edit-author"]')).value = post.author ?? '';
         (document.getElementById('edit-content') || document.querySelector('[name="edit-content"]')).value = post.content ?? '';
-        m.classList.remove('hidden');
-        m.setAttribute('aria-hidden', 'false');
-      }
+        openModal(m);
+  requestAnimationFrame(() => document.getElementById('edit-title')?.focus());
+}
     }
     return; // stop early so this click doesn't bubble into other handlers
   }
@@ -407,12 +530,13 @@ document.getElementById('posts')?.addEventListener('submit', onPostsSubmit);
 function showEditModal(post) {
   const modal = document.getElementById('edit-modal');
   if (!modal) return;
-  document.getElementById('edit-id').value = post.id || '';
-  document.getElementById('edit-title').value = post.title || '';
-  document.getElementById('edit-author').value = post.author || 'Anonymous';
+  document.getElementById('edit-id').value      = post.id || '';
+  document.getElementById('edit-title').value   = post.title || '';
+  document.getElementById('edit-author').value  = post.author || 'Anonymous';
   document.getElementById('edit-content').value = post.content || '';
-  modal.classList.remove('hidden');
-  modal.setAttribute('aria-hidden', 'false');
+  openModal(modal);
+  // focus first field after open
+  requestAnimationFrame(() => document.getElementById('edit-title')?.focus());
 }
 
 /**
@@ -422,9 +546,9 @@ function showEditModal(post) {
 function hideEditModal() {
   const modal = document.getElementById('edit-modal');
   if (!modal) return;
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden', 'true');
+  closeModal(modal);
 }
+
 
 // Close modal on either the X button or clicking the backdrop
 document.addEventListener('click', (e) => {
@@ -471,13 +595,10 @@ document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
 function showDeleteModal({ id, title }) {
   const modal = document.getElementById('delete-modal');
   if (!modal) return;
-  document.getElementById('delete-id').value = id;
+  document.getElementById('delete-id').value = id || '';
   document.getElementById('delete-post-title').textContent = title || '(untitled)';
-  modal.classList.remove('hidden');
-  modal.setAttribute('aria-hidden', 'false');
-
-  // focus first meaningful control (Delete)
-  setTimeout(() => document.getElementById('delete-confirm')?.focus(), 0);
+  openModal(modal);
+  requestAnimationFrame(() => document.getElementById('delete-confirm')?.focus());
 }
 
 function hideDeleteModal() {
@@ -490,7 +611,7 @@ function hideDeleteModal() {
 // Close modal on either the X button or clicking the backdrop
 document.addEventListener('click', (e) => {
   if (e.target.matches('#delete-modal [data-close]')) hideDeleteModal();
-  if (e.target.matches('#delete-modal .modal-backdrop')) hideEDeleterModal();
+  if (e.target.matches('#delete-modal .modal-backdrop')) hideDeleteModal();
 });
 
 /**
@@ -597,6 +718,48 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Generic modal open/close with animation.
+// Assumes markup: <div id="...-modal" class="modal hidden"> 
+// with children .modal-backdrop and .modal-card
+function openModal(modal) {
+  if (!modal) return;
+  // remember last focus
+  modal.dataset.prevFocus = (document.activeElement && document.activeElement.id) || '';
+
+  // make it measurable/interactive
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+
+  // next frame: toggle the open state so transitions run
+  requestAnimationFrame(() => {
+    modal.classList.add('modal--open');
+  });
+}
+
+function closeModal(modal) {
+  if (!modal) return;
+
+  // start closing animation by removing the open flag
+  modal.classList.remove('modal--open');
+
+  // when the card finishes its transform/opacity transition, hide the modal
+  const card = modal.querySelector('.modal-card') || modal;
+  const onEnd = (e) => {
+    if (e.target !== card || (e.propertyName !== 'opacity' && e.propertyName !== 'transform')) return;
+    card.removeEventListener('transitionend', onEnd);
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+
+    // restore focus back to the opener, if we captured an id
+    const prevId = modal.dataset.prevFocus;
+    if (prevId) {
+      const prev = document.getElementById(prevId);
+      if (prev) prev.focus();
+    }
+  };
+  card.addEventListener('transitionend', onEnd);
+}
+
 // -----------------------------------------------------------------------------
 // Collapsible "New Post" panel
 // -----------------------------------------------------------------------------
@@ -610,8 +773,70 @@ document.addEventListener('click', function /*__NP_COLLAPSE_TOGGLE__*/(e) {
   if (!btn) return;
   const form = document.getElementById('post-form');
   if (!form) return;
+
   const expanded = btn.getAttribute('aria-expanded') === 'true';
   btn.setAttribute('aria-expanded', String(!expanded));
-  if (expanded) form.setAttribute('hidden', '');
-  else form.removeAttribute('hidden');
+
+  // OLD (instant)
+  // if (expanded) form.setAttribute('hidden', '');
+  // else form.removeAttribute('hidden');
+
+  // NEW (animated)
+  if (expanded) {
+    collapseForm(form);
+  } else {
+    expandForm(form);
+  }
 });
+
+// --- Animated show/hide for #post-form ---
+function expandForm(el) {
+  if (!el) return;
+
+  // Make sure it's measurable
+  el.hidden = false;
+  el.style.removeProperty('display');
+
+  // Start from 0 → target height
+  el.style.height = '0px';
+  el.style.opacity = '0';
+  el.style.transition = 'height 260ms ease, opacity 180ms ease';
+
+  // Next frame, animate to full height
+  requestAnimationFrame(() => {
+    const target = el.scrollHeight;
+    el.style.height = target + 'px';
+    el.style.opacity = '1';
+    el.addEventListener('transitionend', function onEnd(e) {
+      if (e.propertyName !== 'height') return;
+      el.removeEventListener('transitionend', onEnd);
+      // Clear inline styles so the form can grow naturally later
+      el.style.height = '';
+      el.style.transition = '';
+    });
+  });
+}
+
+function collapseForm(el) {
+  if (!el) return;
+
+  // Fix current height (auto → px) so we can animate to 0
+  const current = el.getBoundingClientRect().height;
+  el.style.height = current + 'px';
+  el.style.opacity = getComputedStyle(el).opacity;
+  el.style.transition = 'height 260ms ease, opacity 180ms ease';
+
+  requestAnimationFrame(() => {
+    el.style.height = '0px';
+    el.style.opacity = '0';
+    el.addEventListener('transitionend', function onEnd(e) {
+      if (e.propertyName !== 'height') return;
+      el.removeEventListener('transitionend', onEnd);
+      el.hidden = true;        // restore your original hidden state
+      // Clean up inline styles
+      el.style.height = '';
+      el.style.transition = '';
+      el.style.opacity = '';
+    });
+  });
+}

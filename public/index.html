@@ -13,16 +13,32 @@
 <body>
   <header>
     <h1>The Art of Ordinary Days</h1>
-    <div id="header-h2"><h2>Where the kettle counts the minutes and the streetlights keep small promises, I collect the easy miracles—warm bread, a shared umbrella, a window left open—and stitch them into a life that remembers to breathe.</h2></div>
+    <div id="header-h2">
+      <h2>Where the kettle counts the minutes and the streetlights keep small promises, I collect the easy miracles—warm
+        bread, a shared umbrella, a window left open—and stitch them into a life that remembers to breathe.</h2>
+    </div>
   </header>
 
   <main>
-      <section class="newpost-box">
-        <div class="row">
-          <button id="np-toggle" class="np-toggle" aria-expanded="false" aria-controls="post-form"
-            title="Toggle new post">+</button>
-            <h2 id="new-post-h2">New Post</h2>
-        </div>
+    <!-- New Post -->
+    <section class="newpost-box">
+      <div class="row">
+        <button id="np-toggle" class="np-toggle" aria-expanded="false" aria-controls="post-form"
+          title="Toggle new post">+</button>
+        <h2 id="new-post-h2">New Post</h2>
+      </div>
+      <form id="post-form" class="np-panel" hidden>
+        <!-- keep your fields -->
+        <input id="title" name="title" placeholder="Title" required />
+        <input id="author" name="author" placeholder="Author" />
+        <textarea id="content" name="content" placeholder="Write something…" required></textarea>
+        <label>Upload image</label>
+        <input id="image" type="file" accept="image/*" />
+        <button type="submit">Post</button>
+      </form>
+
+      <!-- Collapsible panel wrapping the form -->
+      <div id="post-panel" class="collapse">
         <form id="post-form" class="np-panel" hidden>
           <div class="row">
             <input id="author" placeholder="Name" required />
@@ -32,73 +48,90 @@
           <input id="image" type="file" accept="image/png, image/gif, image/jpeg, image/jpg" />
           <button type="submit">Publish</button>
         </form>
-      </section>
+      </div>
+    </section>
 
     <section id="posts">
-      <h2>Posts</h2>
+      <div class="posts-header">
+        <h2>Posts</h2>
+        <div class="posts-toolbar" role="region" aria-label="Search and sort posts">
+          <label class="sr-only" for="post-search">Search posts</label>
+          <input id="post-search" type="search" placeholder="Search title, author, content…" autocomplete="off" />
+          <button id="post-clear" class="btn ghost" title="Clear search" aria-label="Clear search">×</button>
+          <label class="sr-only" for="post-sort">Sort</label>
+          <select id="post-sort" aria-label="Sort posts">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="liked">Most liked</option>
+            <option value="commented">Most commented</option>
+            <option value="az">A–Z (title)</option>
+          </select>
+        </div>
+      </div>
       <div id="list"></div>
     </section>
   </main>
 
-  <footer>
-    <p>Lily Sainte-Claire &copy 2025</p>
-  </footer>
-
   <!-- Edit Modal -->
   <div id="edit-modal" class="modal hidden" aria-hidden="true">
-  <div class="modal-backdrop" data-close></div>
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
-    <div class="modal-header">
-      <h3 id="edit-modal-title">Edit post</h3>
-      <button class="modal-close" data-close aria-label="Close">×</button>
-    </div>
-    <div class="modal-body">
-      <form id="edit-form">
-        <input type="hidden" id="edit-id" />
-        <div class="row">
-          <div class="field">
-            <label for="edit-title">Title</label>
-            <input type="text" id="edit-title" required />
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+      <div class="modal-header">
+        <h3 id="edit-modal-title">Edit post</h3>
+        <button class="modal-close" data-close aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-form">
+          <input type="hidden" id="edit-id" />
+          <div class="row">
+            <div class="field">
+              <label for="edit-title">Title</label>
+              <input type="text" id="edit-title" required />
+            </div>
+            <div class="field">
+              <label for="edit-author">Author</label>
+              <input type="text" id="edit-author" />
+            </div>
           </div>
           <div class="field">
-            <label for="edit-author">Author</label>
-            <input type="text" id="edit-author" />
+            <label for="edit-content">Content</label>
+            <textarea id="edit-content" required></textarea>
           </div>
-        </div>
-        <div class="field">
-          <label for="edit-content">Content</label>
-          <textarea id="edit-content" required></textarea>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn" data-close>Cancel</button>
-          <button type="submit" class="btn primary">Update</button>
-        </div>
-      </form>
+          <div class="actions">
+            <button type="button" class="btn" data-close>Cancel</button>
+            <button type="submit" class="btn primary">Update</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Delete Modal -->
-<div id="delete-modal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-desc">
-  <div class="modal-backdrop" data-close></div>
-  <div class="delete-modal-card">
-    <button type="button" class="delete-modal-close" data-close aria-label="Close">×</button>
+  <!-- Delete Modal -->
+  <div id="delete-modal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true"
+    aria-labelledby="delete-title" aria-describedby="delete-desc">
+    <div class="modal-backdrop" data-close></div>
+    <div class="delete-modal-card">
+      <button type="button" class="delete-modal-close" data-close aria-label="Close">×</button>
 
-    <h3 id="delete-title">Delete post?</h3>
-    <p id="delete-desc" style="opacity:.85; margin:.5rem 0 1rem;">
-      This action can’t be undone. You’re about to delete:
-      <strong id="delete-post-title">—</strong>
-    </p>
+      <h3 id="delete-title">Delete post?</h3>
+      <p id="delete-desc" style="opacity:.85; margin:.5rem 0 1rem;">
+        This action can’t be undone. You’re about to delete:
+        <strong id="delete-post-title">—</strong>
+      </p>
 
-    <!-- holds the target id -->
-    <input type="hidden" id="delete-id" />
+      <!-- holds the target id -->
+      <input type="hidden" id="delete-id" />
 
-    <div class="modal-actions" style="display:flex; gap:.5rem; justify-content:flex-end;">
-      <button type="button" class="btn" data-close>Cancel</button>
-      <button type="button" id="delete-confirm" class="btn danger">Delete</button>
+      <div class="modal-actions" style="display:flex; gap:.5rem; justify-content:flex-end;">
+        <button type="button" class="btn" data-close>Cancel</button>
+        <button type="button" id="delete-confirm" class="btn danger">Delete</button>
+      </div>
     </div>
   </div>
-</div>
 </body>
+
+<footer>
+  <p>Lily Sainte-Claire &copy 2025</p>
+</footer>
 
 </html>

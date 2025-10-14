@@ -98,9 +98,12 @@ textarea {
     resize: none;
 }
 
-input:focus, select:focus,
-textarea:focus, button:focus {
-    outline: 4px solid var(--primary-bg-color);
+input:focus,
+textarea:focus,
+button:focus,
+select:focus {
+    outline: 0.2rem solid var(--primary-bg-color);
+    outline-offset: -0.25rem;
 }
 
 input::placeholder,
@@ -343,7 +346,8 @@ input[type=file]::file-selector-button:hover {
     gap: .75rem;
 }
 
-#edit-form .field label {
+#edit-form .field label,
+label {
     color: var(--primary-color);
     font-weight: 600;
     font-size: .9rem;
@@ -421,14 +425,14 @@ input[type=file]::file-selector-button:hover {
 }
 
 /* Collapsible New Post box */
+
 .newpost-box {
     position: relative;
-    border: 1px solid #e5e7eb;
     border-radius: 10px;
     padding: 1rem;
     background-color: var(--secondary-bg-color);
     border: 1px solid #2a2a2a;
-    margin: 1rem 0 1.25rem;
+    margin: 1rem 0 1rem;
 }
 
 .np-panel[hidden] {
@@ -456,15 +460,114 @@ input[type=file]::file-selector-button:hover {
 
 .np-toggle[aria-expanded="true"] {
     background-color: var(--primary-color);
-    border-color: #111827;
 }
 
-@media all and (max-width: 1024px) and (orientation: portrait) {
+/* ------- Posts toolbar (search + sort) ------- */
+.posts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin: 0;
+    margin-bottom: 1rem;
+}
 
-    main {
-        width: 95vw;
-        max-width: 1200px;
-        margin: 1rem auto;
-        padding: 0 1rem
+.posts-header h2 {
+    margin: 0;
+}
+
+.posts-toolbar {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+.posts-toolbar input[type="search"] {
+    width: min(52vw, 360px);
+    padding: .5rem .6rem;
+    border: 1px solid var(--third-color);
+    border-radius: 10px;
+    font: inherit;
+}
+
+.posts-toolbar select {
+    padding: .5rem .6rem;
+    border: 1px solid var(--third-color);
+    border-radius: 10px;
+    font: inherit;
+    color: var(--secondary-color);
+}
+
+.btn.ghost {
+    background: var(--primary-color);
+    border: 1px solid var(--third-color);
+    border-radius: 10px;
+    padding: .3rem .6rem;
+    cursor: pointer;
+}
+
+.btn.ghost:hover {
+    background-color: var(--primary-bg-color);
+}
+
+.sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+#post-form {
+    overflow: hidden;
+    /* let height clip during animation */
+}
+
+/* ===== Modal animations ===== */
+
+/* Base: keep your existing .modal styles; we only add transitions */
+.modal {
+  /* when hidden, we turn off pointer events (JS will toggle classes) */
+  pointer-events: none;
+}
+.modal.modal--open {
+  pointer-events: auto;
+}
+
+/* Backdrop fades */
+.modal .modal-backdrop {
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.modal.modal--open .modal-backdrop {
+  opacity: 1;
+}
+
+/* Card enters with slight rise + scale + fade */
+.modal .modal-card {
+  transform: translateY(8px) scale(0.98);
+  opacity: 0;
+  transition: transform 220ms ease, opacity 200ms ease;
+  will-change: transform, opacity;
+}
+.modal.modal--open .modal-card {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+/* Respect users who prefer reduced motion */
+/* Optional: reduce motion if user prefers */
+@media (prefers-reduced-motion: reduce) {
+    #post-form {
+        transition: none !important;
     }
+    .modal .modal-backdrop,
+  .modal .modal-card {
+    transition: none !important;
+  }
 }
