@@ -543,6 +543,11 @@ label {
 /* Backdrop fades */
 .modal .modal-backdrop {
     opacity: 0;
+    background: rgba(0, 0, 0, 0.45);
+    /* dim + color to improve contrast */
+    backdrop-filter: blur(6px);
+    /* modern browsers */
+    -webkit-backdrop-filter: blur(6px);
     transition: opacity 200ms ease;
 }
 
@@ -586,4 +591,7 @@ label {
     background: rgba(17, 24, 39, 0.35);
     margin: .5rem 0;
 }
-.modal.modal--open { pointer-events: auto; }
+
+.modal.modal--open {
+    pointer-events: auto;
+}
