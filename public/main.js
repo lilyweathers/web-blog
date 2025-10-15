@@ -168,13 +168,12 @@ let UI_SORT = 'newest';
 function getToolbarEls() {
   return {
     search: document.getElementById('post-search'),
-    clear: document.getElementById('post-clear'),
     sort: document.getElementById('post-sort'),
     list: document.querySelector('#posts #list')
   };
-// Debounce helper: delay calls to `fn` until no invocation occurs for `wait` ms.
 }
 
+// Debounce helper: delay calls to `fn` until no invocation occurs for `wait` ms.
 function debounce(fn, wait) {
   let t;
   return function () {
@@ -182,9 +181,9 @@ function debounce(fn, wait) {
     clearTimeout(t);
     t = setTimeout(function () { fn.apply(null, args); }, wait || 300);
   };
-// Compute the current view (filtered/sorted posts) based on UI state.
 }
 
+// Render the posts from STATE_POSTS (used after edits/deletes)
 function computeView() {
   const q = (UI_SEARCH || '').trim().toLowerCase();
   let rows = Array.isArray(STATE_POSTS) ? STATE_POSTS.slice() : [];
@@ -209,9 +208,9 @@ function computeView() {
     default: rows.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); break;
   }
   return rows;
-// Convert a millisecond delta into a human-readable relative time (e.g., '3m ago').
 }
 
+// Convert a millisecond delta into a human-readable relative time (e.g., '3m ago').
 function fmtWhen(ms) {
   try { return new Date(ms || Date.now()).toLocaleString(); } catch (e) { return ''; }
 }
