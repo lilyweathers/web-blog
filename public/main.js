@@ -251,6 +251,7 @@ function refreshPosts() {
 
 // App bootstrap: wire up events and kick off the initial load after HTML is parsed.
 document.addEventListener('DOMContentLoaded', function () {
+  
   // Initial load
   loadPosts().catch(function (err) {
     var list = document.querySelector('#posts #list');
@@ -698,86 +699,6 @@ function focusFirstIn(modal) {
   }
 }
 
-// Remember the element that opened the modal; restore it on close
-// Unhide a modal and add an 'open' class so CSS can animate its entrance; also stores the previous focus to restore it later.
-
-function openModal(modal) {
-  if (!modal) return;
-
-  // remember last focus (for restoration after close)
-  modal.dataset.prevFocus = (document.activeElement && document.activeElement.id) || '';
-
-  // make visible, then animate in on next frame
-  modal.classList.remove('hidden');
-  modal.setAttribute('aria-hidden', 'false');
-  requestAnimationFrame(() => {
-    modal.classList.add('modal--open');
-  });
-
-  // Ensure the modal can receive key events and focus
-  if (!modal.hasAttribute('tabindex')) modal.setAttribute('tabindex', '-1');
-  try { modal.focus({ preventScroll: true }); } catch {}
-
-  // Per-modal ESC handler (bind & store for cleanup)
-  const escHandler = (e) => {
-    if (e.key !== 'Escape') return;
-    e.preventDefault();
-    if (modal.id === 'delete-modal') hideDeleteModal();
-    else if (modal.id === 'edit-modal') hideEditModal();
-  };
-  modal._escHandler = escHandler;
-  modal.addEventListener('keydown', escHandler);
-  document.addEventListener('keydown', escHandler);
-}
-
-
-// Close a modal with animation: remove 'modal--open', wait transition, hide, restore focus.
-// Start the modal exit animation, then hide it on transitionend and restore focus to the opener.
-
-function closeModal(modal) {
-  if (!modal) return;
-
-  // cleanup ESC listeners bound in openModal
-  const esc = modal._escHandler;
-  if (esc) {
-    modal.removeEventListener('keydown', esc);
-    document.removeEventListener('keydown', esc);
-    delete modal._escHandler;
-  }
-
-  // start exit transition
-  modal.classList.remove('modal--open');
-
-  // transition target: support either .modal-card or .delete-modal-card
-  const card = modal.querySelector('.modal-card, .delete-modal-card') || modal;
-
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    modal.classList.add('hidden');
-    modal.setAttribute('aria-hidden', 'true');
-
-    // restore focus
-    const prevId = modal.dataset.prevFocus;
-    if (prevId) {
-      const prev = document.getElementById(prevId);
-      if (prev) prev.focus();
-    }
-  };
-
-  const onEnd = (e) => {
-    if (e && e.target !== card) return;
-    card.removeEventListener('transitionend', onEnd);
-    finish();
-  };
-  card.addEventListener('transitionend', onEnd);
-
-  // Fallback in case transitionend doesn't fire
-  setTimeout(finish, 400);
-}
-
-
 
 // Esc key listener
 document.addEventListener('keydown', (e) => {
@@ -827,7 +748,6 @@ document.addEventListener('keydown', (e) => {
 // with children .modal-backdrop and .modal-card
 // -----------------------------------------------------------------------------
 
-
 function openModal(modal) {
   if (!modal) return;
 
@@ -857,8 +777,6 @@ function openModal(modal) {
   document.addEventListener('keydown', escHandler);
 }
 
-
-
 function closeModal(modal) {
   if (!modal) return;
 
@@ -874,7 +792,7 @@ function closeModal(modal) {
   modal.classList.remove('modal--open');
 
   // transition target: support either .modal-card or .delete-modal-card
-  const card = modal.querySelector('.modal-card') || modal;
+  const card = modal.querySelector('.modal-card  .delete-modal-card') || modal;
 
   let done = false;
   const finish = () => {
